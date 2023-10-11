@@ -20,10 +20,11 @@ python main.py \
   --start-time=0 \
   --times=5 \
   --fc-weight=10.0 \
-  --train=tta_meta_sup1 \
+  --train=tta_meta_sup \
   --loader=meta \
   --sup_weight=1 \
   --mix-lambda=0.9 \
   --thresh=0.95 \
+  --loss-names=em \
   --s=1
-  #--eval=tta_meta_sup1
+  #--eval=tta_meta_sup
