@@ -26,3 +26,4 @@ python main.py \
   --mix-lambda=0.9 \
   --thresh=0.95 \
   --s=1
+  #--eval=tta_meta_sup1

@@ -61,9 +61,9 @@ class MyLogger:
     def tf_log_file(self, mode, epoch, loss_dict, acc_dict):
         assert self.enable_tensorboard, "Tensorboard not enabled!!!!"
         for k, v in loss_dict.items():
-            self.writer.add_scalar('loss/{}/{}/{}'.format(self.target_domain, mode, k), v, epoch)
+            self.writer.add_scalar('epoch/loss/{}/{}/{}'.format(self.target_domain, mode, k), v, epoch)
         for k, v in acc_dict.items():
-            self.writer.add_scalar('acc/{}/{}/{}'.format(self.target_domain, mode, k), v, epoch)
+            self.writer.add_scalar('epoch/acc/{}/{}/{}'.format(self.target_domain, mode, k), v, epoch)
         self.writer.flush()
 
     def tf_log_file_step(self, mode, step, loss_dict, acc_dict):

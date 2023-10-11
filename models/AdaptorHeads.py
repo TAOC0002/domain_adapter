@@ -51,24 +51,30 @@ class Losses():
 
     def GEM_T(self, logits, **kwargs):
         logits = logits - logits.mean(1, keepdim=True).detach()
-        T = self.s * logits.std(1, keepdim=True).detach() * 2
+        #T = self.s *logits.std(1, keepdim=True).detach() * 2
+        T = self.s *logits.std(0, keepdim=True).mean().detach()
         prob = (logits / T).softmax(1)
-        loss = - ((prob * prob.log()).sum(1) * (T ** 2)).mean()
+        #loss = - ((prob * prob.log()).sum(1) * (T ** 2)).mean()
+        loss = - (prob * prob.log()).sum(1).mean()
         return loss
 
     def GEM_SKD(self, logits, **kwargs):
         logits = logits - logits.mean(1, keepdim=True).detach()
-        T = self.s *logits.std(1, keepdim=True).detach() * 2
+        #T = self.s *logits.std(1, keepdim=True).detach() * 2
+        T = self.s * logits.std(0, keepdim=True).mean().detach()
         original_prob = logits.softmax(1)
         prob = (logits / T).softmax(1)
-        loss = - ((original_prob.detach() * prob.log()).sum(1) * (T ** 2)).mean()
+        #loss = - ((original_prob.detach() * prob.log()).sum(1) * (T ** 2)).mean()
+        loss = - (original_prob.detach() * prob.log()).sum(1).mean()
         return loss
 
     def GEM_Aug(self, logits, **kwargs):
         logits = logits - logits.mean(1, keepdim=True).detach()
-        T =  self.s * logits.std(1, keepdim=True).detach() * 2
+        #T =  self.s * logits.std(1, keepdim=True).detach() * 2
+        T = self.s * logits.std(0, keepdim=True).mean().detach()
         aug_logits = kwargs['aug_logits']
-        loss = - ((aug_logits.softmax(1).detach() * (logits / T).softmax(1).log()).sum(1) * (T ** 2)).mean()
+        #loss = - ((aug_logits.softmax(1).detach() * (logits / T).softmax(1).log()).sum(1) * (T ** 2)).mean()
+        loss = - (aug_logits.softmax(1).detach() * (logits / T).softmax(1).log()).sum(1).mean()
         return loss
 
     def em(self, logits, **kwargs):
