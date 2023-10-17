@@ -180,11 +180,11 @@ def tta_meta_minimax(meta_model, eval_data, lr, epoch, args, engine, mode):
                 opt_min.step(sup_loss + unsup_loss)
 
         get_loss_and_acc(meta_model(**data, train_mode='test'), running_loss, running_corrects)
-        step += 1
-        if step % 100 == 0:
-            loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
-            acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
-            print(loss_log + '\n' + acc_log)
+        # step += 1
+        # if step % 100 == 0:
+        #     loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
+        #     acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
+        #     print(loss_log + '\n' + acc_log)
     loss, acc = running_loss.get_average_dicts(), running_corrects.get_average_dicts()
     if 'main' in acc:
         return acc['main'], (loss, acc)

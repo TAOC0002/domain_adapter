@@ -31,7 +31,7 @@ for step in 1 5; do
         --mix-lambda=0.9 \
         --thresh=0.7 \
         --loss-names gem-aug norm\
-        --BN-start=4
+        --BN-start=4 \
         --s=$s \
         --eval=tta_meta_sup \
         --TTAug
