@@ -125,7 +125,7 @@ class DomainAdaptor(ERM):
 
         if args.AdaMixBN:
             self.bns = list(convert_to_target(self.backbone, functools.partial(AdaMixBN, transform=args.Transform, lambd=args.mix_lambda),
-                                              verbose=False, start=0, end=5, res50=args.backbone == 'resnet50')[-1].values())
+                                              verbose=False, start=args.BN_start, end=args.BN_end, res50=args.backbone == 'resnet50')[-1].values())
 
     def step(self, x, label, train_mode='test', **kwargs):
         if train_mode == 'train':

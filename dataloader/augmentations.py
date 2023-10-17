@@ -272,12 +272,19 @@ class TestTimeAug(object):
         p = .1
 
         self.crop, self.flip, self.jitter, self.randaug = True, True, jitter, randaug
-
+        self.transform_list = [transforms.ColorJitter(p, p, p, p),
+                               transforms.RandomResizedCrop(args.img_size, scale=(args.min_scale, 1)),
+                               #transforms.RandomEqualize(),
+                               transforms.RandomInvert(),
+                               #transforms.RandomPosterize(2),
+                               #transforms.RandomSolarize(192),
+                               transforms.RandomAutocontrast()
+                               ]
         self.resized_crop = transforms.RandomResizedCrop(args.img_size, scale=(args.min_scale, 1))
         self.rand_flip = transforms.RandomHorizontalFlip()
         self.randaug_op = RandAugment()
         self.jitter_op = transforms.ColorJitter(p, p, p, p)
-
+        self.normalize_op =transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         self.post_t = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
     def test_aug(self, image, bs=16):
@@ -304,6 +311,15 @@ class TestTimeAug(object):
         inputs = torch.stack(inputs, 0)
         return inputs
 
+    def batch_aug(self, batch, bs):
+        imgs = []
+        idxes = [random.randint(0, len(self.transform_list) - 1) for i in range(bs)]
+        for img in batch:
+            for j in range(bs):
+                img = self.transform_list[idxes[j]](img)
+            img = self.normalize_op(img)
+            imgs.append(img.unsqueeze(0))
+        return torch.cat(imgs)
 
 class Rotation(object):
     def tensor_rot_90(self, x):

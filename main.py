@@ -73,7 +73,8 @@ def get_default_parser():
     parser.add_argument('--meta-lr', default=1e-3, type=float)
     parser.add_argument('--meta-lr-weight', default=1, type=float)
     parser.add_argument('--meta-second-order', type=ast.literal_eval, default=False)
-    parser.add_argument('--meta-aug', default=1, type=float)
+    #parser.add_argument('--batch-aug', action='store_true', default=False)
+    #parser.add_argument('--meta-aug', default=1, type=float)
 
     parser.add_argument('--replace', action='store_true')
 
@@ -99,6 +100,8 @@ def get_default_parser():
     parser.add_argument('--AdaMixBN', action='store_true', default=True)
     parser.add_argument('--Transform', action='store_true', default=True)
     parser.add_argument('--mix-lambda', type=float, default=None)
+    parser.add_argument('--BN-start', type=int, default=0)
+    parser.add_argument('--BN-end', type=int, default=5)
 
     parser.add_argument('--LAME', action='store_true', default=False)
     parser.add_argument('--online', action='store_true', default=False)

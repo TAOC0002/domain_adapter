@@ -528,18 +528,33 @@ def analyze_output_dicts(output_dicts):
 def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reduction='sum', prefix=None):
     outputs = analyze_output_dicts(output_dicts)
     total_loss = []
+    sup_loss = []
     for name, d in outputs.items():
         if prefix is not None:
             name = prefix + name
         loss, acc, acc_size, loss_size = d['loss'], d['acc'], d['acc_size'], d['loss_size']
         if loss is not None:
-            total_loss.append(loss)
+            if 'sup' in name:
+                sup_loss.append(loss)
+            else:
+                total_loss.append(loss)
         if running_loss is not None and loss is not None:
             loss = to_numpy(loss)
             running_loss.update(name, loss.item() * loss_size, loss_size)
         if running_acc is not None and acc is not None:
             acc = to_numpy(acc)
             running_acc.update(name, acc * acc_size, acc_size)
+    if len(sup_loss) > 0 :
+        if reduction == 'sum':
+            sup_loss = torch.stack(sup_loss).sum()
+        elif reduction == 'mean':
+            sup_loss = torch.stack(sup_loss).mean()
+        elif reduction == 'none':
+            pass
+        else:
+            raise Exception("Wrong reduction : {}".format(reduction))
+    else:
+        sup_loss = 0
     if len(total_loss) > 0:
         if reduction == 'sum':
             total_loss = torch.stack(total_loss).sum()
@@ -549,6 +564,6 @@ def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reductio
             pass
         else:
             raise Exception("Wrong reduction : {}".format(reduction))
-        return total_loss
     else:
-        return None
+        total_loss = 0
+    return total_loss, sup_loss

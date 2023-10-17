@@ -91,8 +91,8 @@ class Losses():
 
     def get_loss(self, name, **kwargs):
         res = {name: {'loss': self.losses[name.lower()](**kwargs)}}
-        logits = kwargs['logits']
-        if self.thresh > 0:
+        if 'em' in name and self.thresh > 0:
+            logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
             if len(conf_label) > 0:

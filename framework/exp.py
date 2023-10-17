@@ -32,7 +32,7 @@ class Experiments(object):
         self.dataset = self.args.dataset
         self.domains = Datasets[self.dataset].Domains
         self.save_path = Path(self.args.save_path)
-        mkdir(self.save_path, level=3)
+        mkdir(self.save_path, level=4)
         with open(self.save_path / 'args.txt', 'a') as f:
             f.write(str(args) + '\n\n')
         if args.show_entry:
