@@ -80,7 +80,7 @@ def get_default_parser():
 
     parser.add_argument('--TTAug', action='store_true')
     parser.add_argument('--TTA-bs', default=3, type=int)
-    parser.add_argument('--TTA-head', default='em', choices=['em', 'rot', 'norm', 'none', 'jigsaw'])
+    parser.add_argument('--TTA-head', nargs='+', default=['em'], choices=['em', 'rot', 'norm', 'none', 'jigsaw'])
 
     # augment data in dataset
     parser.add_argument('--jigsaw', action='store_true')
@@ -94,8 +94,10 @@ def get_default_parser():
     parser.add_argument('--thresh', default=0, type=float)
     parser.add_argument('--sup_weight', default=0.1, type=float,
                         help='sup_loss weight for em ssl task')
-    parser.add_argument('--weight', default=0, type=float,
+    parser.add_argument('--main_weight', nargs='+', default=[0], type=float,
                         help='head loss weight for the main task')
+    parser.add_argument('--sl_weight', nargs='+', default=[1], type=float,
+                        help='head loss weight for the self-learning task')
     # AdaMixBN
     parser.add_argument('--AdaMixBN', action='store_true', default=True)
     parser.add_argument('--Transform', action='store_true', default=True)
