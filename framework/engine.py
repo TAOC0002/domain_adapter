@@ -88,6 +88,7 @@ class GenericEngine(object):
         data_config = Datasets[args.dataset](args)
         self.num_classes = data_config.NumClasses
         self.model = Models[args.model](num_classes=self.num_classes, pretrained=True, args=args).to(self.device)
+        self.model.head_to(self.device)
         (self.source_train, self.source_val, self.target_test), self.target_domain = self.get_loaders()
         self.optimizers = get_optimizers(self.model, args)
         self.num_epoch, self.schedulers = get_scheduler(args, self.optimizers)

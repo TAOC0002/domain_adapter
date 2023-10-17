@@ -90,7 +90,7 @@ class Losses():
         return -logits.norm(dim=1).mean() * 2
 
     def get_loss(self, name, **kwargs):
-        res = {name: {'loss': self.losses[name.lower()](**kwargs)}}
+        res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight':kwargs['weight']}}
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
@@ -110,6 +110,7 @@ class EntropyMinimizationHead(Head):
         super(EntropyMinimizationHead, self).__init__(num_classes, in_ch, args)
         self.losses = Losses(s=args.s, sup_weight=args.sup_weight, thresh=args.thresh)
         self.loss_names = args.loss_names
+
     def get_cos_logits(self, feats, backbone):
         w = backbone.fc.weight  # c X C
         w, feats = nn.functional.normalize(w, dim=1), nn.functional.normalize(feats, dim=1)
@@ -164,7 +165,7 @@ class EntropyMinimizationHead(Head):
             else:
                 aug_logits = None
             ret.update(self.losses.get_loss(loss_name, logits=logits, backbone=backbone, feats=feats,
-                                            step=step, aug_logits=aug_logits))
+                                            step=step, aug_logits=aug_logits, weight=kwargs['weight']))
         return ret
 
     def do_train(self, backbone, x, label, **kwargs):
@@ -201,7 +202,6 @@ class RotationHead(Head):
         super(RotationHead, self).__init__(num_classes, in_ch, args)
         # self.shared = args.shared
         self.rotation_fc = nn.Linear(in_ch, 4, bias=False)
-        self.weight = args.weight
         # emb_dim = in_ch
         # self.rotation_fc = nn.Sequential(
         #     nn.Linear(in_ch, emb_dim),
@@ -220,7 +220,8 @@ class RotationHead(Head):
 
         return {
             'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
-            RotationHead.KEY: {'loss_type': 'ce', 'acc_type': 'acc', 'pred': rotation_logits, 'target': rotation_label}
+            RotationHead.KEY: {'loss_type': 'ce', 'acc_type': 'acc', 'pred': rotation_logits, 'target': rotation_label,
+                               'weight': kwargs['weight']}
         }
 
     def do_train(self, backbone, x, label, **kwargs):
@@ -233,7 +234,8 @@ class RotationHead(Head):
 
         class_dict = {
             'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label},
-            RotationHead.KEY: {'loss_type': 'ce', 'acc_type': 'acc', 'pred': rotation_logits, 'target': rotation_label, 'weight': self.weight} #0.0}
+            RotationHead.KEY: {'loss_type': 'ce', 'acc_type': 'acc', 'pred': rotation_logits, 'target': rotation_label,
+                               'weight': kwargs['weight']} #0.0}
         }
         return class_dict
 
@@ -243,7 +245,6 @@ class NormHead(Head):
 
     def __init__(self, num_classes, in_ch, args):
         super(NormHead, self).__init__(num_classes, in_ch, args)
-        self.weight = args.weight
         class MLP(nn.Module):
             def __init__(self, in_size=10, out_size=1, hidden_dim=32, norm_reduce=False):
                 super(MLP, self).__init__()
@@ -272,7 +273,7 @@ class NormHead(Head):
         normed_loss = self.mlp(feats)
         return {
             'main': {'acc_type': 'acc', 'pred': base_features[-1], 'target': label},
-            NormHead.KEY: {'loss': normed_loss},
+            NormHead.KEY: {'loss': normed_loss, 'weight': kwargs['weight']},
         }
 
     def do_train(self, backbone, x, label, **kwargs):
@@ -281,7 +282,7 @@ class NormHead(Head):
         normed_loss = self.mlp(feats)
         return {
             'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': base_features[-1], 'target': label},
-            NormHead.KEY: {'loss': normed_loss, 'weight': self.weight} #1
+            NormHead.KEY: {'loss': normed_loss, 'weight': kwargs['weight']} #1
         }
 
 
@@ -292,7 +293,6 @@ class JigsawHead(Head):
         super(JigsawHead, self).__init__(num_classes, in_ch, args)
         jigsaw_classes = 32
         emb_dim = in_ch
-        self.weight = args.weight
         # self.jigsaw_classifier = nn.Linear(in_ch, jigsaw_classes)
         self.jigsaw_classifier = nn.Sequential(
             nn.Linear(in_ch, emb_dim),
@@ -312,7 +312,8 @@ class JigsawHead(Head):
         jig_logits = self.jigsaw_classifier(jig_features)
         return {
             'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
-            JigsawHead.KEY: {'acc_type': 'acc', 'pred': jig_logits, 'target': kwargs['jigsaw_label'], 'loss_type': 'ce'},
+            JigsawHead.KEY: {'acc_type': 'acc', 'pred': jig_logits, 'target': kwargs['jigsaw_label'], 'loss_type': 'ce',
+                             'weight': kwargs['weight']},
         }
 
     def train(self, mode=True):
@@ -332,7 +333,8 @@ class JigsawHead(Head):
             jig_features = jig_features[-2].mean((-1, -2))
             jig_logits = self.jigsaw_classifier(jig_features)
             ret.update({
-                    JigsawHead.KEY: {'acc_type': 'acc', 'pred': jig_logits, 'target': kwargs['jigsaw_label'], 'loss_type': 'ce', 'weight': self.weight} #0.1},
+                    JigsawHead.KEY: {'acc_type': 'acc', 'pred': jig_logits, 'target': kwargs['jigsaw_label'],
+                                     'loss_type': 'ce', 'weight': kwargs['weight']} #0.1},
                     # 'jig_cls': {'acc_type': 'acc', 'pred': jig_class_logits, 'target': label, 'loss_type': 'ce', 'weight':0.5},
                 })
         return ret

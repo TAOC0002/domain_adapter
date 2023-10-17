@@ -121,22 +121,31 @@ class DomainAdaptor(ERM):
             'none': NoneHead,
             'jigsaw': JigsawHead,
         }
-        self.head = heads[args.TTA_head.lower()](num_classes, self.in_ch, args)
-
+        self.heads = [heads[head.lower()](num_classes, self.in_ch, args) for head in args.TTA_head]
+        self.train_weights = args.main_weight
+        self.ft_weights = args.sl_weight
         if args.AdaMixBN:
             self.bns = list(convert_to_target(self.backbone, functools.partial(AdaMixBN, transform=args.Transform, lambd=args.mix_lambda),
                                               verbose=False, start=args.BN_start, end=args.BN_end, res50=args.backbone == 'resnet50')[-1].values())
 
     def step(self, x, label, train_mode='test', **kwargs):
+        res = {}
         if train_mode == 'train':
-            res = self.head.do_train(self.backbone, x, label, model=self, **kwargs)
+            # res = self.head.do_train(self.backbone, x, label, model=self, **kwargs)
+            res.update(self.heads[0].do_train(self.backbone, x, label, model=self, weight=self.train_weights[0], **kwargs))
         elif train_mode == 'test':
-            res = self.head.do_test(self.backbone, x, label, model=self, **kwargs)
+            # res = self.head.do_test(self.backbone, x, label, model=self, **kwargs)
+            res.update(self.heads[0].do_test(self.backbone, x, label, model=self, weight=self.train_weights[0], **kwargs))
         elif train_mode == 'ft':
-            res = self.head.do_ft(self.backbone, x, label, model=self, **kwargs)
+            for i, head in enumerate(self.heads):
+                #res = self.head.do_ft(self.backbone, x, label, model=self, **kwargs)
+                res.update(head.do_ft(self.backbone, x, label, model=self, weight=self.ft_weights[i], **kwargs))
         else:
             raise Exception("Unexpected mode : {}".format(train_mode))
         return res
+    def head_to(self, device):
+        for i in range(len(self.heads)):
+            self.heads[i].to(device)
 
     def finetune(self, data, optimizers, loss_name, running_loss=None, running_corrects=None):
         if hasattr(self, 'bns'):

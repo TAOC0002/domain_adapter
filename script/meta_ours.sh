@@ -16,7 +16,7 @@ for step in 1 5; do
         --replace \
         --meta-step=$step\
         --meta-second-order=False \
-        --TTA-head=em \
+        --TTA-head em norm\
         --model=DomainAdaptor \
         --backbone=$net \
         --batch-size=64 \
@@ -25,13 +25,13 @@ for step in 1 5; do
         --start-time=0 \
         --times=1 \
         --fc-weight=10.0 \
-        --train=tta_meta \
+        --train=tta_meta_sup \
         --loader=meta \
         --sup_weight=1 \
         --mix-lambda=0.9 \
         --thresh=0.7 \
-        --loss-names gem-aug norm\
-        --BN-start=4 \
+        --loss-names=gem-aug \
+        --BN-start=0
         --s=$s \
         --eval=tta_meta_sup \
         --TTAug
