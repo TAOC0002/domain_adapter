@@ -16,7 +16,6 @@ for step in 1 5; do
         --replace \
         --meta-step=$step\
         --meta-second-order=False \
-        --TTA-head em norm\
         --model=DomainAdaptor \
         --backbone=$net \
         --batch-size=64 \
@@ -25,15 +24,18 @@ for step in 1 5; do
         --start-time=0 \
         --times=1 \
         --fc-weight=10.0 \
+        --eval=tta_meta_sup \
         --train=tta_meta_sup \
         --loader=meta \
         --sup_weight=1 \
         --mix-lambda=0.9 \
         --thresh=0.7 \
+        --TTA-head em norm\
+        --main_weight 0 0 \
+        --sl_weight 1 1 \ 
         --loss-names=gem-aug \
-        --BN-start=0
+        --BN-start=0 \
         --s=$s \
-        --eval=tta_meta_sup \
         --TTAug
         #--load-path=Results/ERM/resnet18_PACS
     done
