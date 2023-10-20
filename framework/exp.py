@@ -62,8 +62,8 @@ class Experiments(object):
     def run(self):
         print()
         try:
-            #if self.args.do_train:
-            #    self.backup(self.args)
+            if self.args.do_train:
+                self.backup(self.args)
             if self.exp_num[0] == -2:
                 print('Run All Exp Many Times !!!')
                 self.run_all_exp_many_times(self.times)

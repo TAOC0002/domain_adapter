@@ -1,6 +1,9 @@
 import copy
 import functools
 import warnings
+
+import torch
+
 from framework.ERM import ERM
 from framework.loss_and_acc import *
 from framework.registry import EvalFuncs, Models
@@ -19,6 +22,7 @@ class AdaMixBN(nn.BatchNorm2d):
         super(AdaMixBN, self).__init__(in_ch)
         if lambd is not None:
             self.lambd = nn.Parameter(torch.tensor(lambd))
+            self.lambd.requires_grad = True
             #torch.nn.init(self.lambda, mean=0.5, std=0.01)
         else:
             self.lambd = lambd
@@ -128,6 +132,22 @@ class DomainAdaptor(ERM):
             self.bns = list(convert_to_target(self.backbone, functools.partial(AdaMixBN, transform=args.Transform, lambd=args.mix_lambda),
                                               verbose=False, start=args.BN_start, end=args.BN_end, res50=args.backbone == 'resnet50')[-1].values())
 
+    def reset_shift_bn(self):
+        nn.init.constant_(self.backbone.shift.weight.data, 1)
+        nn.init.constant_(self.backbone.shift.bias.data, 0)
+        #for npp, p in self.backbone.bn0.named_parameters():
+        #    if npp in ['weight', 'bias']:
+        #        with torch.no_grad():
+        #            p.data = 0
+
+    def StochasticBNShift(self):
+        # Stochastic bn shift
+        for npp, p in self.backbone.shift.named_parameters():
+            if npp in ['weight', 'bias']:
+                mask = (torch.rand(p.shape)<0.001).float().cuda()
+                with torch.no_grad():
+                    p.data = torch.rand(p.shape).float().cuda() * mask + p * (1. - mask)
+
     def step(self, x, label, train_mode='test', **kwargs):
         res = {}
         if train_mode == 'train':
@@ -160,7 +180,6 @@ class DomainAdaptor(ERM):
                 if i == 0:
                     res = o
             return res
-
     def forward(self, *args, **kwargs):
         return self.step(*args, **kwargs)
 

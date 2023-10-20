@@ -3,7 +3,7 @@ from framework.meta_util import split_image_and_label
 from framework.registry import EvalFuncs, TrainFuncs
 from models.AdaptorHelper import get_new_optimizers
 from utils.tensor_utils import to, AverageMeterDict
-from dataloader.augmentations import TestTimeAug
+from dataloader.augmentations import MixUp
 import higher
 """
 ARM
@@ -16,16 +16,25 @@ def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     meta_model.train()
     inner_opt_conv = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], momentum=args.meta_second_order)
     print(f'Meta LR : {args.meta_lr}')
+    if args.domain_mixup:
+        mixup_op = MixUp(meta_model.num_classes)
     globalstep = len(train_data) * epoch
     for data_list in train_data:
         data_list = to(data_list, device)
         split_data = split_image_and_label(data_list, size=args.batch_size)
+
+        if args.domain_mixup:
+            split_data = mixup_op(split_data)
+
+        if args.domain_bn_shift:
+            meta_model.StochasticBNShift()
+
         #optimizers.zero_grad()
         for data in split_data:
             optimizers.zero_grad()
             with higher.innerloop_ctx(meta_model, inner_opt_conv, copy_initial_weights=False, track_higher_grads=True) as (fnet, diffopt):
                 for _ in range(args.meta_step):
-                    unsup_loss, _ = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt{_}_')
+                    unsup_loss, _ = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_')
                     diffopt.step(unsup_loss)
                 losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_')
                 losses[0].backward()
@@ -45,6 +54,7 @@ def tta_meta_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
     meta_model.eval()
     inner_opt = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], momentum=args.meta_second_order)
+    print(f'Inner optimizer: {type(inner_opt).__name__}')
     for data in eval_data:
         data = to(data, device)
 
@@ -54,7 +64,7 @@ def tta_meta_test(meta_model, eval_data, lr, epoch, args, engine, mode):
         with higher.innerloop_ctx(meta_model, inner_opt, copy_initial_weights=False, track_higher_grads=False) as (fnet, diffopt):
             fnet.train()
             for _ in range(args.meta_step):
-                unsup_loss, _ = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt{_}_')
+                unsup_loss, _ = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_')
                 diffopt.step(unsup_loss)
             get_loss_and_acc(fnet(**data, train_mode='test'), running_loss, running_corrects)
         #loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
@@ -72,15 +82,23 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
     meta_model.train()
     inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
-    inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['weight'], momentum=args.meta_second_order)
+    #inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['weight'], momentum=args.meta_second_order)
+    inner_opt_min =get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
     print(f'Meta LR : {args.meta_lr}')
     globalstep = len(train_data) * epoch
     #randaug_op = TestTimeAug(args)
+    if args.domain_mixup:
+        mixup_op = MixUp(meta_model.num_classes)
     for data_list in train_data:
-        #if args.batch_aug:
-        #    data_list['x'] = randaug_op.batch_aug(data_list['x'], 1)
         data_list = to(data_list, device)
         split_data = split_image_and_label(data_list, size=args.batch_size)
+
+        if args.domain_bn_shift:
+            meta_model.StochasticBNShift()
+
+        if args.domain_mixup:
+            split_data = mixup_op(split_data)
+
         #optimizers.zero_grad()
         for data in split_data:
             optimizers.zero_grad()
@@ -88,6 +106,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
                 for _ in range(args.meta_step):
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
                     opt_max.step(sup_loss-unsup_loss)
+            #optimizers.zero_grad()
             losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
             losses[0].backward()
             optimizers.step()
@@ -96,6 +115,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
                 for _ in range(args.meta_step):
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_min_')
                     opt_min.step(sup_loss + unsup_loss)
+            #optimizers.zero_grad()
             losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
             losses[0].backward()
             optimizers.step()
@@ -113,15 +133,25 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
     meta_model.train()
     inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
-    inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['weight'], momentum=args.meta_second_order)
+    inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
+    #inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], momentum=args.meta_second_order)
     print(f'Meta LR : {args.meta_lr}')
+    if args.domain_mixup:
+        mixup_op = MixUp(meta_model.num_classes)
     globalstep = len(train_data) * epoch
     for data_list in train_data:
         data_list = to(data_list, device)
         split_data = split_image_and_label(data_list, size=args.batch_size)
-        optimizers.zero_grad()
+
+        if args.domain_bn_shift:
+            meta_model.StochasticBNShift()
+
+        if args.domain_mixup:
+            split_data = mixup_op(split_data)
+
+        #optimizers.zero_grad()
         for data in split_data:
-            #optimizers.zero_grad()
+            optimizers.zero_grad()
             with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
                 for _ in range(args.meta_step):
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
@@ -136,11 +166,11 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
                     opt_min.step(sup_loss + unsup_loss)
             losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min')
             losses[0].backward()
-            #optimizers.step()
+            optimizers.step()
             #loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
             #acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
             #print(loss_log + '\n' + acc_log)
-        optimizers.step()
+        #optimizers.step()
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
         #optimizers.step()
@@ -153,8 +183,11 @@ def tta_meta_minimax(meta_model, eval_data, lr, epoch, args, engine, mode):
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
     meta_model.eval()
     inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias'], momentum=False)
-    inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['weight'], momentum=False)
+    #inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['weight'], momentum=False)
+    inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
     original_state_dict = meta_model.state_dict()
+    if args.domain_bn_shift:
+        meta_model.reset_shift_bn()
     step = 0
     for data in eval_data:
         data = to(data, device)

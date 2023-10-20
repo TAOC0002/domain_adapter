@@ -269,7 +269,8 @@ class ClassMeasure():
 def CE_1D(logits, label):
     N = logits.size(0)
     logits = logits.view(N, -1)
-    label = label.view(N)
+    if len(label.shape)==1:
+        label = label.view(N)
     return F.cross_entropy(logits, label)
 
 
@@ -314,6 +315,8 @@ def MSE(logits, label):
 def acc(logits, label):
     N = logits.size(0)
     logits = logits.view(N, -1)
+    if len(label.shape)>1:
+        label = label.argmax(1)
     label = label.view(N).long()
     preds = logits.argmax(1)
     # print((preds == label))

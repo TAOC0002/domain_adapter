@@ -59,7 +59,6 @@ def set_param_trainable(model, module_names, requires_grad, param_names=None):
         set_names.extend(_names)
     return set_names
 
-
 def remove_param_grad(model, module_names, param_names):
     classes = {
         'bn': nn.BatchNorm2d,
@@ -97,13 +96,15 @@ def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=N
     opt_dic = []
     for name in names:
         name = name.lower()
-        params, names = collect_module_params(model, module_class=classes[name], param_names=param_names)
-        for param in params:
-            opt_dic.append({'params': param, 'lr': lr})
+        params, _names = collect_module_params(model, module_class=classes[name], param_names=param_names)
+        for param, n in zip(params, _names):
+            if 'shift' not in n:
+                opt_dic.append({'params': param, 'lr': lr})
     opt = get_optimizer(opt_dic, lr, opt_type, momentum)
     # optimizers.append(opt)
     # opt_names.append(names)
     return opt
+
 
 
 def convert_to_target(net, norm, start=0, end=5, verbose=True, res50=False):

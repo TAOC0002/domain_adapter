@@ -105,6 +105,8 @@ def get_default_parser():
     parser.add_argument('--BN-start', type=int, default=0)
     parser.add_argument('--BN-end', type=int, default=5)
 
+    parser.add_argument('--domain_mixup', action='store_true', default=False)
+    parser.add_argument('--domain_bn_shift', action='store_true', default=False)
     parser.add_argument('--LAME', action='store_true', default=False)
     parser.add_argument('--online', action='store_true', default=False)
 

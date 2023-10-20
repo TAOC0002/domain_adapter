@@ -40,6 +40,12 @@ class Resnet(nn.Module):
         if args.in_ch != 3:
             self.init_conv1(args.in_ch, pretrained)
 
+        self.shift = nn.BatchNorm2d(64)
+        nn.init.constant_(self.shift.weight.data, 1)
+        nn.init.constant_(self.shift.bias.data, 0)
+        for name, param in self.shift.named_parameters():
+            param.requires_grad = False
+
     def init_conv1(self, in_ch, pretrained):
         model_inplanes = 64
         conv1 = nn.Conv2d(in_ch, model_inplanes, kernel_size=7, stride=2, padding=3, bias=False)
@@ -49,9 +55,10 @@ class Resnet(nn.Module):
                 self.conv1.weight.data[:, i, :, :] = old_weights[:, i % 3, :, :]
         self.conv1 = conv1
 
-    def forward(self, x):
+    def forward(self, x, shift=False):
         net = self
         x = net.conv1(x)
+        x = net.shift(x)
         x = net.bn1(x)
         x = net.relu(x)
         x = net.maxpool(x)
