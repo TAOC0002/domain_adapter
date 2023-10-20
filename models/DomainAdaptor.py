@@ -140,11 +140,11 @@ class DomainAdaptor(ERM):
         #        with torch.no_grad():
         #            p.data = 0
 
-    def StochasticBNShift(self):
+    def StochasticBNShift(self, e=1e-3):
         # Stochastic bn shift
         for npp, p in self.backbone.shift.named_parameters():
             if npp in ['weight', 'bias']:
-                mask = (torch.rand(p.shape)<0.001).float().cuda()
+                mask = (torch.rand(p.shape)<e).float().cuda()
                 with torch.no_grad():
                     p.data = torch.rand(p.shape).float().cuda() * mask + p * (1. - mask)
 
