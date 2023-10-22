@@ -124,6 +124,7 @@ class DomainAdaptor(ERM):
         self.heads = [heads[head.lower()](num_classes, self.in_ch, args) for head in args.TTA_head]
         self.train_weights = args.main_weight
         self.ft_weights = args.sl_weight
+        self.ft_steps = 1
         if args.AdaMixBN:
             self.bns = list(convert_to_target(self.backbone, functools.partial(AdaMixBN, transform=args.Transform, lambd=args.mix_lambda),
                                               verbose=False, start=args.BN_start, end=args.BN_end, res50=args.backbone == 'resnet50')[-1].values())
@@ -153,9 +154,9 @@ class DomainAdaptor(ERM):
 
         with torch.enable_grad():
             res = None
-            for i in range(self.head.ft_steps):
+            for i in range(self.ft_steps):
                 o = self.step(**data, train_mode='ft', step=i, loss_name=loss_name)
-                meta_train_loss = get_loss_and_acc(o, running_loss, running_corrects, prefix=f'ft_A{i}_')
+                meta_train_loss = get_loss_and_acc(o, running_loss, running_corrects, prefix=f'ft_A{i}_', meta=False)
                 zero_and_update(optimizers, meta_train_loss)
                 if i == 0:
                     res = o
@@ -174,11 +175,17 @@ def test_time_adaption(model, eval_data, lr, epoch, args, engine, mode):
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
 
     model.eval()
-    model_to_ft = copy.deepcopy(model)
+    model_to_ft = Models[args.model](num_classes=Datasets[args.dataset](args).NumClasses, 
+                                     pretrained=True, args=args).to(torch.device("cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu"))
     original_state_dict = model.state_dict()
 
     online = args.online
-    optimizers = model_to_ft.setup(online)
+    model_to_ft.backbone.train()
+    lr = args.lr
+    print(f'Learning rate : {lr}')
+    optimizers = [
+        get_new_optimizers(model, lr=lr, names=['bn'], opt_type='sgd', momentum=online),
+    ]
 
     loss_names = args.loss_names  # 'gem-t', 'gem-skd', 'gem-tta']
 

@@ -373,6 +373,15 @@ class OfficeHome(BaseDatasetConfig):
     Domains = ['Art', 'Clipart', 'Product', 'RealWorld']
 
 
+@Datasets.register("Office31")
+class Office31(BaseDatasetConfig):
+    Name = 'Office31'
+    NumClasses = 31
+    SplitRatio = 0.9
+    RelativePath = 'office31'
+    Domains = ['amazon', 'dslr', 'webcam']
+
+
 @Datasets.register("MDN")
 @Datasets.register("MiniDomainNet")
 class MiniDomainNet(BaseDatasetConfig):
