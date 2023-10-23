@@ -164,7 +164,7 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
                 for _ in range(args.meta_step):
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_min_')
                     opt_min.step(sup_loss + unsup_loss)
-                losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min')
+                losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
                 losses[0].backward()
             optimizers.step()
             #loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
