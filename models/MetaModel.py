@@ -1,12 +1,11 @@
 from framework.loss_and_acc import *
-from framework.meta_util import split_image_and_label, put_parameters, get_parameters
+from framework.meta_util import split_image_and_label, put_parameters, get_parameters, compare_two_dicts
 from framework.registry import EvalFuncs, TrainFuncs
 from models.AdaptorHelper import get_new_optimizers
 from utils.tensor_utils import to, AverageMeterDict
 from dataloader.augmentations import MixUp
 import higher
 import copy
-
 """
 ARM
 """
@@ -182,59 +181,41 @@ def tta_meta_minimax(meta_model, eval_data, lr, epoch, args, engine, mode):
     #import higher
     device = engine.device
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
-    meta_model.eval()
-    inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
-    #inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['weight'], momentum=False)
-    inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
-    original_state_dict = copy.deepcopy(meta_model.state_dict())
     if args.domain_bn_shift:
         meta_model.reset_shift_bn()
-    step = 0
     fast_model = copy.deepcopy(meta_model)
+    inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
+    #inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['weight'], momentum=False)
+    inner_opt_min = get_new_optimizers(fast_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
+    step = 0
+    meta_model.eval()
+    fast_model.eval()
     for data in eval_data:
         data = to(data, device)
 
         # Normal Test
         with torch.no_grad():
-            get_loss_and_acc(meta_model.step(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
+            _, o = get_loss_and_acc(meta_model.step(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
 
-        fast_model = copy.deepcopy(meta_model)
-        fast_model.train()
-        for _ in range(args.meta_step):
-            inner_opt_max.zero_grad()
-            unsup_loss, sup_loss = get_loss_and_acc(fast_model(**data, train_mode='ft', step=_), running_loss,
-                                                    running_corrects, prefix=f'spt_max_')
-            unsup_loss = sup_loss-unsup_loss
-            unsup_loss.backward()
-            inner_opt_max.step()
-            #inner_opt_max.step(sup_loss - unsup_loss)
-        for _ in range(args.meta_step):
-            inner_opt_min.zero_grad()
-            unsup_loss, sup_loss = get_loss_and_acc(fast_model(**data, train_mode='ft', step=_), running_loss,
+
+        with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_max):
+            fnet.train()
+            for _ in range(args.meta_step):
+                unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
+                                                        running_corrects, prefix=f'spt_max_')
+                opt_max.step(sup_loss - unsup_loss)
+
+            with torch.no_grad():
+                params, states = get_parameters(fnet)
+                fast_model = put_parameters(fast_model, params, states)
+
+        with higher.innerloop_ctx(fast_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_min):
+            fnet.train()
+            for _ in range(args.meta_step):
+                unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                     running_corrects, prefix=f'spt_min_')
-
-            unsup_loss = sup_loss+unsup_loss
-            unsup_loss.backward()
-            inner_opt_min.step()
-
-        get_loss_and_acc(fast_model(**data, train_mode='test'), running_loss, running_corrects)
-
-        # with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_max):
-        #     fnet.train()
-        #     for _ in range(args.meta_step):
-        #         unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
-        #                                                 running_corrects, prefix=f'spt_max_')
-        #         opt_max.step(sup_loss - unsup_loss)
-        #     get_loss_and_acc(fnet(**data, train_mode='test'), running_loss, running_corrects)
-        #
-        # with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_min):
-        #     #fnet.load_state_dict(current_net)
-        #     fnet.train()
-        #     for _ in range(args.meta_step):
-        #         unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
-        #                                             running_corrects, prefix=f'spt_min_')
-        #         opt_min.step(sup_loss + unsup_loss)
-        #     get_loss_and_acc(fnet(**data, train_mode='test'), running_loss, running_corrects)
+                opt_min.step(sup_loss + unsup_loss)
+            get_loss_and_acc(fnet(**data, train_mode='test'), running_loss, running_corrects)
 
         step += 1
         if step % 100 == 0:

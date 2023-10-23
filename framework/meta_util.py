@@ -19,31 +19,35 @@ def put_theta(model, theta):
     if theta is None:
         return model
 
-    def k_param_fn(tmp_model, name=None):
+    def k_param_fn(model, name=None):
         if len(theta) == 0:
             return
 
-        if len(tmp_model._modules) != 0:
-            for (k, v) in tmp_model._modules.items():
+        if len(model._modules) != 0:
+            for (k, v) in model._modules.items():
                 if name == '':
                     k_param_fn(v, name=str(k))
                 else:
                     k_param_fn(v, name=str(name + '.' + k))
 
         # WARN : running_mean, 和 running_var 不是 parameter，所以在 new 中不会被更新
-        for (k, v) in tmp_model._parameters.items():
-            if isinstance(v, torch.Tensor) and str(name + '.' + k) in theta.keys():
-                tmp_model._parameters[k] = theta[str(name + '.' + k)]
+        for (k, v) in model._parameters.items():
+            if v is not None:
+                if isinstance(v, torch.Tensor) and str(name + '.' + k) in theta.keys():
+                    model._parameters[k].data.detach().copy_(theta[str(name + '.' + k)].data)
+                # tmp_model._parameters[k] = theta[str(name + '.' + k)]
             # else:
             #     print(name+'.'+k)
             # theta.pop(str(name + '.' + k))
 
-        for (k, v) in tmp_model._buffers.items():
-            if isinstance(v, torch.Tensor) and str(name + '.' + k) in theta.keys():
-                tmp_model._buffers[k] = theta[str(name + '.' + k)]
-            # else:
-            #     print(k)
-            # theta.pop(str(name + '.' + k))
+        for (k, v) in model._buffers.items():
+            if v is not None:
+                if isinstance(v, torch.Tensor) and str(name + '.' + k) in theta.keys():
+                    #tmp_model._buffers[k] = theta[str(name + '.' + k)]
+                    model._buffers[k].detach().copy_(theta[str(name + '.' + k)])
+                # else:
+                #     print(k)
+                # theta.pop(str(name + '.' + k))
 
     k_param_fn(model, name='')
     return model
@@ -56,8 +60,8 @@ def get_parameters(model):
     return parameters, states
 
 
-def put_parameters(model, param, state):
-    model = put_theta(model, param)
+def put_parameters(model, params, state):
+    model = put_theta(model, params)
     model = put_theta(model, state)
     return model
 

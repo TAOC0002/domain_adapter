@@ -40,7 +40,7 @@ class Resnet(nn.Module):
         if args.in_ch != 3:
             self.init_conv1(args.in_ch, pretrained)
 
-        self.shift = nn.BatchNorm2d(64)
+        self.shift = nn.BatchNorm2d(64, momentum=1)
         nn.init.constant_(self.shift.weight.data, 1)
         nn.init.constant_(self.shift.bias.data, 0)
         for name, param in self.shift.named_parameters():
