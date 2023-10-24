@@ -146,8 +146,13 @@ class EntropyMinimizationHead(Head):
     def do_ft(self, backbone, x, label, step=0, model=None, **kwargs):
         base_features = backbone(x)
         logits, feats = base_features[-1], base_features[-2].mean((2, 3))
-        ret = {
-            'main': {'acc_type': 'acc', 'pred': logits, 'target': label}}
+
+        if self.args.LAME:
+            logits = self.do_lame(feats, logits)
+            ret = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+        else:
+            ret = {
+                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:

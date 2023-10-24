@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torchvision import transforms
-
+from torch.nn.functional import one_hot
 
 # from einops import rearrange
 
@@ -220,6 +220,32 @@ class CutoutDefault(object):
         img *= mask
         return img
 
+class MixUp(object):
+    def __init__(self,  num_classes, alpha=0.4):
+        self.alpha = float(alpha)
+        self._dist = torch.distributions.Beta(torch.tensor([alpha]), torch.tensor([alpha]))
+        self.num_classes = num_classes
+    def __call__(self, inputs):
+        S = range(len(inputs))
+        outputs = []
+        for i in S:
+            lam = float(self._dist.sample())
+            j = random.choice(list(set(S)-set([i])))
+            res = {'x': self._mixup_data(inputs[i]['x'], inputs[j]['x'], lam),
+                   'label': self._mixup_label(inputs[i]['label'], inputs[j]['label'], lam)}
+            outputs.append(res)
+        return outputs
+
+    def _mixup_label(self, a, b, lam):
+        a = one_hot(a, num_classes=self.num_classes)
+        b = one_hot(b, num_classes=self.num_classes)
+        if not a.dtype.is_floating_point:
+            a = a.float()
+        if not b.dtype.is_floating_point:
+            b = b.float()
+        return a.mul_(1.0 - lam).add_(b.mul(lam))
+    def _mixup_data(self, a, b, lam):
+        return a.mul_(1.0 - lam).add_(b.mul(lam))
 
 class RandAugment:
     def __init__(self, n=4, m=5):

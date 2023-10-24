@@ -6,7 +6,6 @@ from pathlib import Path
 import torch
 import functools
 import numpy as np
-from copy import deepcopy
 from torchvision import transforms
 from torch.utils.data import Dataset, ConcatDataset, DataLoader
 from torchvision.datasets.folder import default_loader as img_loader
@@ -146,7 +145,7 @@ class BaseDatasetConfig(object):
             for j in args.tgt:
                 target_domain.append(self.Domains[j])
         else:
-            source_domain = deepcopy(self.Domains)
+            source_domain = copy.deepcopy(self.Domains)
             target_domain = [source_domain.pop(args.exp_num[0])]
 
         print('Source domain: ', end=''), [print(domain, end=', ') for domain in source_domain]
