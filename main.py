@@ -100,7 +100,7 @@ def get_default_parser():
                         help='head loss weight for the self-learning task')
     # AdaMixBN
     parser.add_argument('--AdaMixBN', action='store_true', default=True)
-    parser.add_argument('--Transform', action='store_true', default=True)
+    parser.add_argument('--Transform', action='store_true', default=False)
     parser.add_argument('--mix-lambda', type=float, default=None)
     parser.add_argument('--BN-start', type=int, default=0)
     parser.add_argument('--BN-end', type=int, default=5)

@@ -86,7 +86,7 @@ def get_optimizer(opt_dic, lr, opt_type='sgd', momentum=True):
 
 
 def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=None,
-                       opt_type='sgd', momentum=False):
+                       opt_type='sgd', momentum=False, inner=False):
     optimizers, opt_names = [], []
     classes = {
         'bn': nn.BatchNorm2d,
@@ -100,6 +100,9 @@ def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=N
         for param, n in zip(params, _names):
             if 'shift' not in n:
                 opt_dic.append({'params': param, 'lr': lr})
+        # if inner:
+        #     print(_names)
+
     opt = get_optimizer(opt_dic, lr, opt_type, momentum)
     # optimizers.append(opt)
     # opt_names.append(names)

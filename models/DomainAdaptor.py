@@ -21,9 +21,10 @@ class AdaMixBN(nn.BatchNorm2d):
     def __init__(self, in_ch, lambd=None, transform=True, mix=True, idx=0):
         super(AdaMixBN, self).__init__(in_ch)
         if lambd is not None:
-            self.lambd = nn.Parameter(torch.tensor(lambd))
-            self.lambd.requires_grad = True
-            #torch.nn.init(self.lambda, mean=0.5, std=0.01)
+            self.lambd = nn.Parameter(torch.tensor(lambd), requires_grad=True)
+            # self.lambd.retain_grad()
+            # self.lambd.requires_grad = True
+            # torch.nn.init(self.lambda, mean=0.5, std=0.01)
         else:
             self.lambd = lambd
         self.rectified_params = None
