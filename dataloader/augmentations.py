@@ -228,8 +228,8 @@ class MixUp(object):
     def __call__(self, inputs):
         S = range(len(inputs))
         outputs = []
+        lam = float(self._dist.sample())
         for i in S:
-            lam = float(self._dist.sample())
             j = random.choice(list(set(S)-set([i])))
             res = {'x': self._mixup_data(inputs[i]['x'], inputs[j]['x'], lam),
                    'label': self._mixup_label(inputs[i]['label'], inputs[j]['label'], lam)}

@@ -22,19 +22,20 @@ class AdaMixBN(nn.BatchNorm2d):
         super(AdaMixBN, self).__init__(in_ch)
         if lambd is not None:
             self.lambd = nn.Parameter(torch.tensor(lambd))
-            self.lambd.requires_grad = True
+            #self.lambd.requires_grad = True
             #torch.nn.init(self.lambda, mean=0.5, std=0.01)
+            self.lambd_trainable = True
         else:
-            self.lambd = lambd
+            self.lambd_trainable = False
         self.rectified_params = None
         self.transform = transform
         self.layer_idx = idx
         self.mix = mix
 
-    def get_retified_gamma_beta(self, lambd, src_mu, src_var, cur_mu, cur_var):
+    def get_retified_gamma_beta(self, src_mu, src_var, cur_mu, cur_var):
         C = src_mu.shape[1]
-        new_gamma = (cur_var + self.eps).sqrt() / (lambd * src_var + (1 - lambd) * cur_var + self.eps).sqrt() * self.weight.view(1, C, 1, 1)
-        new_beta = lambd * (cur_mu - src_mu) / (cur_var + self.eps).sqrt() * new_gamma + self.bias.view(1, C, 1, 1)
+        new_gamma = (cur_var + self.eps).sqrt() / (self.lambd * src_var + (1 - self.lambd) * cur_var + self.eps).sqrt() * self.weight.view(1, C, 1, 1)
+        new_beta = self.lambd * (cur_mu - src_mu) / (cur_var + self.eps).sqrt() * new_gamma + self.bias.view(1, C, 1, 1)
         return new_gamma.view(-1), new_beta.view(-1)
 
     def get_lambd(self, x, src_mu, src_var, cur_mu, cur_var):
@@ -57,22 +58,20 @@ class AdaMixBN(nn.BatchNorm2d):
         cur_mu = x.mean((0, 2, 3), keepdims=True)
         cur_var = x.var((0, 2, 3), keepdims=True)
 
-        if self.lambd is not None:
-            lambd = self.lambd
-        else:
-            lambd = self.get_lambd(x, src_mu, src_var, cur_mu, cur_var).mean(0, keepdims=True)
+        if not self.lambd_trainable:
+            self.lambd = self.get_lambd(x, src_mu, src_var, cur_mu, cur_var).mean(0, keepdims=True)
 
         if self.transform:
             if self.rectified_params is None:
-                new_gamma, new_beta = self.get_retified_gamma_beta(lambd, src_mu, src_var, cur_mu, cur_var)
+                new_gamma, new_beta = self.get_retified_gamma_beta(src_mu, src_var, cur_mu, cur_var)
                 # self.test(x, lambd, src_mu, src_var, cur_mu, cur_var, new_gamma, new_beta)
                 self.weight.data = new_gamma.data
                 self.bias.data = new_beta.data
                 self.rectified_params = new_gamma, new_beta
             return cur_mu, cur_var
         else:
-            new_mu = lambd * src_mu + (1 - lambd) * cur_mu
-            new_var = lambd * src_var + (1 - lambd) * cur_var
+            new_mu = self.lambd * src_mu + (1 - self.lambd) * cur_mu
+            new_var = self.lambd * src_var + (1 - self.lambd) * cur_var
             return new_mu, new_var
 
     def forward(self, x):
@@ -131,6 +130,10 @@ class DomainAdaptor(ERM):
         if args.AdaMixBN:
             self.bns = list(convert_to_target(self.backbone, functools.partial(AdaMixBN, transform=args.Transform, lambd=args.mix_lambda),
                                               verbose=False, start=args.BN_start, end=args.BN_end, res50=args.backbone == 'resnet50')[-1].values())
+
+    def set_momentum(self, momentum):
+        for bn in self.bns:
+            bn.momentum = momentum
 
     def reset_shift_bn(self):
         nn.init.constant_(self.backbone.shift.weight.data, 1)

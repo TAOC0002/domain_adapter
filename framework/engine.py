@@ -88,14 +88,14 @@ class GenericEngine(object):
         data_config = Datasets[args.dataset](args)
         self.num_classes = data_config.NumClasses
         self.model = Models[args.model](num_classes=self.num_classes, pretrained=True, args=args).to(self.device)
-        self.model.head_to(self.device)
+        #self.model.head_to(self.device)
         (self.source_train, self.source_val, self.target_test), self.target_domain = self.get_loaders()
         self.optimizers = get_optimizers(self.model, args)
         self.num_epoch, self.schedulers = get_scheduler(args, self.optimizers)
         self.logger = MyLogger(args, self.path, '_'.join(self.target_domain), enable_tensorboard=True)
 
         self.global_parameters = {}
-
+        self.epoch = args.epoch
         if len(args.load_path) > 0:
             self.load_model(args.load_path)
 
@@ -118,27 +118,28 @@ class GenericEngine(object):
 
         if self.args.do_train:
             for epoch in tqdm(range(self.num_epoch)):
+
                 lr = self.optimizers[0].param_groups[0]['lr'] if isinstance(self.optimizers, (list, tuple)) else self.optimizers.param_groups[0]['lr']
-                print('Epoch: {}/{}, Lr: {:.6f}'.format(epoch, self.num_epoch - 1, lr))
+                print('Epoch: {}/{}, Lr: {:.6f}'.format(self.epoch, self.num_epoch - 1, lr))
                 print('Temporary Best Accuracy is {:.4f} ({:.4f} at Epoch {})'.format(test_acc, best_acc, best_epoch))
 
-                (loss_dict, acc_dict) = TrainFuncs[self.args.train](self.model, self.source_train, lr, epoch, self.args, self, mode='train')
-                self.logger.log('train', epoch, loss_dict, acc_dict)
+                (loss_dict, acc_dict) = TrainFuncs[self.args.train](self.model, self.source_train, lr, self.epoch, self.args, self, mode='train')
+                self.logger.log('train', self.epoch, loss_dict, acc_dict)
 
-                if epoch % self.args.eval_step == 0:
-                    acc, (loss_dict, acc_dict) = EvalFuncs[self.args.eval](self.model, self.source_val, lr, epoch, self.args, self, mode='eval')
-                    self.logger.log('eval', epoch, loss_dict, acc_dict)
+                if self.epoch % self.args.eval_step == 0:
+                    acc, (loss_dict, acc_dict) = EvalFuncs[self.args.eval](self.model, self.source_val, lr, self.epoch, self.args, self, mode='eval')
+                    self.logger.log('eval', self.epoch, loss_dict, acc_dict)
 
-                    acc_, (loss_dict, acc_dict) = EvalFuncs[self.args.eval](self.model, self.target_test, lr, epoch, self.args, self, mode='test')
-                    self.logger.log('test', epoch, loss_dict, acc_dict)
+                    acc_, (loss_dict, acc_dict) = EvalFuncs[self.args.eval](self.model, self.target_test, lr, self.epoch, self.args, self, mode='test')
+                    self.logger.log('test', self.epoch, loss_dict, acc_dict)
 
-                if epoch > 0 and epoch % self.args.save_step == 0 and epoch >= self.args.start_save_epoch:
-                    self.save_model(f'{epoch}.pt')
+                if self.epoch > 0 and self.epoch % self.args.save_step == 0 and self.epoch >= self.args.start_save_epoch:
+                    self.save_model(f'{self.epoch}.pt')
 
                 if acc >= best_acc:
-                    best_acc, test_acc, best_epoch = acc, acc_, epoch
+                    best_acc, test_acc, best_epoch = acc, acc_, self.epoch
                     self.save_model('model_best.pt')
-
+                self.epoch += 1
                 self.schedulers.step()
 
             if self.args.save_last:
@@ -155,7 +156,8 @@ class GenericEngine(object):
     def save_model(self, name='model_best.pt'):
         save_dict = {
             'model': self.model.state_dict(),
-            'opt': self.optimizers.state_dict()
+            'opt': self.optimizers.state_dict(),
+            'epoch': self.epoch
         }
         torch.save(save_dict, os.path.join(self.path, 'models', name))
 
@@ -173,6 +175,8 @@ class GenericEngine(object):
                 except Exception as e:
                     print(e)
                 print('Load optimizer from {}'.format(path), ret1)
+            if 'epoch' in m:
+                self.epoch = int(m['epoch'])
         else:
             print('Model in {}, Not found !!!!'.format(path))
         return self.model
