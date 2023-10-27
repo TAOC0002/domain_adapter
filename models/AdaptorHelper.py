@@ -86,7 +86,7 @@ def get_optimizer(opt_dic, lr, opt_type='sgd', momentum=True):
 
 
 def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=None,
-                       opt_type='sgd', momentum=False, inner=False):
+                       opt_type='sgd', lambd_lr=None, momentum=False):
     optimizers, opt_names = [], []
     classes = {
         'bn': nn.BatchNorm2d,
@@ -94,15 +94,17 @@ def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=N
         'fc': nn.Linear
     }
     opt_dic = []
+    if lambd_lr is None:
+        lambd_lr = lr
     for name in names:
         name = name.lower()
         params, _names = collect_module_params(model, module_class=classes[name], param_names=param_names)
         for param, n in zip(params, _names):
             if 'shift' not in n:
-                opt_dic.append({'params': param, 'lr': lr})
-        # if inner:
-        #     print(_names)
-
+                if 'lambd' in n:
+                    opt_dic.append({'params': param, 'lr': lambd_lr})
+                else:
+                    opt_dic.append({'params': param, 'lr': lr})
     opt = get_optimizer(opt_dic, lr, opt_type, momentum)
     # optimizers.append(opt)
     # opt_names.append(names)

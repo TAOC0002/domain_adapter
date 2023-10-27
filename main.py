@@ -71,7 +71,7 @@ def get_default_parser():
     parser.add_argument('--TN', action='store_true')
     parser.add_argument('--meta-step', default=1, type=int)
     parser.add_argument('--meta-lr', default=1e-3, type=float)
-    parser.add_argument('--meta-lr-weight', default=1, type=float)
+    parser.add_argument('--meta-lambd-lr', default=None, type=float)
     parser.add_argument('--meta-second-order', type=ast.literal_eval, default=False)
     #parser.add_argument('--batch-aug', action='store_true', default=False)
     #parser.add_argument('--meta-aug', default=1, type=float)
@@ -104,12 +104,14 @@ def get_default_parser():
     parser.add_argument('--mix-lambda', type=float, default=None)
     parser.add_argument('--BN-start', type=int, default=0)
     parser.add_argument('--BN-end', type=int, default=5)
+    parser.add_argument('--epoch', type=int, default=0)
 
     parser.add_argument('--domain_mixup', action='store_true', default=False)
     parser.add_argument('--domain_bn_shift', action='store_true', default=False)
-    parser.add_argument('--domain_bn_shift_p', type=float, default=1e-3)
+    parser.add_argument('--domain_bn_shift_p', type=float, default=5e-3)
     parser.add_argument('--LAME', action='store_true', default=False)
     parser.add_argument('--online', action='store_true', default=False)
+    parser.add_argument('--bn-momentum', action='store_true', default=False)
 
     return parser
 
