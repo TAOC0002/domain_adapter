@@ -528,7 +528,7 @@ def analyze_output_dicts(output_dicts):
     return output
 
 
-def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reduction='sum', prefix=None):
+def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reduction='sum', prefix=None, meta=True):
     outputs = analyze_output_dicts(output_dicts)
     total_loss = []
     sup_loss = []
@@ -569,4 +569,6 @@ def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reductio
             raise Exception("Wrong reduction : {}".format(reduction))
     else:
         total_loss = 0
+    if not meta:
+        return total_loss
     return total_loss, sup_loss
