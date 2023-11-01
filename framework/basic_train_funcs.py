@@ -17,8 +17,8 @@ def deepall_train(model, train_data, lr, epoch, args, engine, mode):
         data_list = to(data_list, device)
         output_dicts = model(**data_list, epoch=epoch, step=len(train_data) * epoch + i, engine=engine, train_mode='train')
         total_loss = get_loss_and_acc(output_dicts, running_loss, running_corrects)
-        if total_loss is not None:
-            total_loss.backward()
+        if total_loss[0] is not None:
+            total_loss[0].backward()
 
         optimizers.step()
         optimizers.zero_grad()
