@@ -2,10 +2,10 @@
 
 python main.py \
   --dataset=PACS \
-  --save-path=Results/Ours/debug/PACS/resnets18_sup1_woMax_woLambda_gem_t_lr1e3 \
+  --save-path=Results/Ours/debug/PACS/resnets18_sup1_woMax_fullwLambda_gem_t_lr2e-4_meta_lr5e-2 \
   --gpu=0 \
   --do-train=True \
-  --lr=1e-3 \
+  --lr=2e-4 \
   --data-root=../../Datasets/DA \
   --replace \
   --meta-second-order=False \
@@ -13,20 +13,21 @@ python main.py \
   --model=DomainAdaptor \
   --backbone=resnet18 \
   --batch-size=64 \
-  --num-epoch=100 \
-  --exp-num -2 \
+  --num-epoch=30 \
+  --exp-num 0 \
   --start-time=0 \
-  --times=3 \
+  --times=1 \
   --fc-weight=10.0 \
   --train=tta_meta_sup1 \
   --eval=tta_meta_sup \
   --s=1 \
-  --loss-names=gem-t
+  --loss-names=gem-t \
   --loader=meta \
+  --meta-lr=5e-2 \
   --meta-step=1 \
   --thresh=0 \
-  --meta-lr=1e-2
-  #--meta-lambd-lr=5e-2 \
-  #--mix-lambda=0.75 \
-  #--thresh=0.75
+  --mix-lambda=0.75 \
+  --meta-lambd-lr=5e-2
+  #--with-max
+  #--domain_bn_shift
   #--Transform

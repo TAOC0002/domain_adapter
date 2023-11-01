@@ -1,3 +1,4 @@
+import os.path
 import shutil
 import inspect
 import numpy as np
@@ -9,6 +10,7 @@ from framework.engine import GenericEngine
 from framework.log import generate_exp
 from utils.tensor_utils import mkdir
 import torch
+from framework.log import read_log_best
 
 torch.manual_seed(200423)
 np.random.seed(200243)
@@ -142,7 +144,6 @@ class Experiments(object):
     def run_one_exp(self, exp_idx=0, time=0):
         args = deepcopy(self.args)
         args.exp_num = [exp_idx]
-        args.save_path = str(Path(args.save_path) / '{}{}'.format(self.domains[exp_idx], time))
         engine = GenericEngine(args, time)
         test_acc, test_acc_dict = engine.train()
         return test_acc, test_acc_dict

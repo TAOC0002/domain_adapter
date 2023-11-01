@@ -21,7 +21,7 @@ python main.py \
   --train=tta_meta \
   --eval=tta_meta \
   --s=1 \
-  --loss-names=gem-t
+  --loss-names=gem-t \
   --loader=meta \
   --meta-step=1 \
   --meta-lr=1e-2
