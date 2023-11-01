@@ -2,11 +2,11 @@
 
 python main.py \
   --dataset=PACS \
-  --save-path=pretrained_models/PACS/resnet18-bs64/AS/3 \
+  --save-path=Results/Ours/debug/PACS/resnets18_sup1_woMax_fullwLambda_gem_t_lr2e-4_meta_lr5e-2 \
   --gpu=0 \
   --do-train=True \
-  --lr=1e-3 \
-  --data-root=../data \
+  --lr=2e-4 \
+  --data-root=../../Datasets/DA \
   --replace \
   --meta-second-order=False \
   --TTA-head em \
@@ -14,18 +14,20 @@ python main.py \
   --backbone=resnet18 \
   --batch-size=64 \
   --num-epoch=30 \
-  --exp-num -1 \
+  --exp-num 0 \
   --start-time=0 \
-  --times=0 \
+  --times=1 \
   --fc-weight=10.0 \
   --train=tta_meta_sup1 \
   --eval=tta_meta_sup \
   --s=1 \
   --loss-names=gem-t \
-  --loader=normal \
+  --loader=meta \
+  --meta-lr=5e-2 \
   --meta-step=1 \
-  --meta-lr=1e-2 \
-  --thresh=0.75 \
-  #--meta-lambd-lr=5e-2 \
-  #--mix-lambda=0.75 \
+  --thresh=0 \
+  --mix-lambda=0.75 \
+  --meta-lambd-lr=5e-2
+  #--with-max
+  #--domain_bn_shift
   #--Transform

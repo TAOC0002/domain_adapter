@@ -4,7 +4,6 @@ import numpy as np
 import re
 from tensorboardX import SummaryWriter
 import os
-
 from framework.registry import Datasets
 
 
@@ -122,7 +121,16 @@ def get_acc_list(folder, line_idx, times, domains):
         accs_list.append(accs)
     return accs_list
 
-
+def read_log_best(file):
+    acc = -1
+    with open(file, 'r') as f:
+        for line in f:
+            if 'Best test' in line:
+                context = line.split()
+                for i, n in enumerate(context):
+                    if 'main' in n:
+                        acc = float(context[i])
+    return acc
 def generate_exp(folder, domains, times=5, type='all', with_ema=False):
     if type == 'last':
         many_exp_file = 'last_many_exp.txt'
