@@ -2,7 +2,7 @@
 
 python main.py \
   --dataset=PACS \
-  --save-path=Results/Ours/debug/PACS/resnets18_sup1_woMax_fullwLambda_gem_t_lr2e-4_meta_lr5e-2 \
+  --save-path=Results/Ours/debug/PACS/resnets18_sup1_Max_Lambda_gem_t_lr2e-4_meta_lr5e-2_maxlr5e-3_thresh075 \
   --gpu=0 \
   --do-train=True \
   --lr=2e-4 \
@@ -25,9 +25,11 @@ python main.py \
   --loader=meta \
   --meta-lr=5e-2 \
   --meta-step=1 \
-  --thresh=0 \
+  --thresh=0.75 \
   --mix-lambda=0.75 \
-  --meta-lambd-lr=5e-2
-  #--with-max
+  --meta-lambd-lr=5e-2\
+  --with-max \
+  --meta-max-lr=5e-3
+  #--no-inner-lambda
   #--domain_bn_shift
   #--Transform
