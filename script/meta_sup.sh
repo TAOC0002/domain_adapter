@@ -2,7 +2,7 @@
 
 python main.py \
   --dataset=PACS \
-  --save-path=Results/Ours/debug/PACS/resnets18_sup_Max_Lambda_gem_t_lr2e-4_meta_lr5e-2_maxlr1e-1_thresh075\
+  --save-path=Results/Ours/debug/PACS/resnets18_sup_Max_Lambda_gem_t_lr2e-4_meta_lr5e-2_maxlr1e-3_thresh075\
   --gpu=0 \
   --do-train=True \
   --lr=2e-4 \
