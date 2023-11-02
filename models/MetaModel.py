@@ -144,7 +144,7 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
     device, optimizers = engine.device, engine.optimizers
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
     meta_model.train()
-    inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
+    inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_max_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
     if args.no_inner_lambda:
         inner_opt_min = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
     else:
@@ -205,7 +205,7 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     fast_model = copy.deepcopy(meta_model)
     meta_model.eval()
     fast_model.eval()
-    inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
+    inner_opt_max = get_new_optimizers(meta_model, lr=args.meta_max_lr, names=['bn'], param_names=['bias'], momentum=args.meta_second_order)
     if args.no_inner_lambda:
         inner_opt_min = get_new_optimizers(fast_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
     else:
