@@ -100,10 +100,10 @@ class Losses():
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
-            passed_samples = torch.count_nonzero(conf).item() / conf.shape[0]
-            if passed_samples > 0.99:
-                print('===============================')
-                print(str(passed_samples) + " samples passed thresh " + str(self.thresh))
+            # passed_samples = torch.count_nonzero(conf).item() / conf.shape[0]
+            # if passed_samples > 0.99:
+            #     print('===============================')
+            #     print(str(passed_samples) + " samples passed thresh " + str(self.thresh))
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
