@@ -55,13 +55,7 @@ class Losses():
         T = self.s *logits.std(0, keepdim=True).mean().detach()
         prob = (logits / T).softmax(1)
         #loss = - ((prob * prob.log()).sum(1) * (T ** 2)).mean()
-        if self.thresh > 0:
-            conf = prob.max(1)[0] < self.thresh
-            prob = prob[conf]
-        if len(prob) > 0:
-            loss = - (prob * prob.log()).sum(1).mean()
-        else:
-            loss = torch.tensor(0.0)
+        loss = - (prob * prob.log()).sum(1).mean()
         return loss
 
     def GEM_SKD(self, logits, **kwargs):
