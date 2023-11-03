@@ -41,6 +41,7 @@ def deepall_eval(model, eval_data, lr, epoch, args, engine, mode):
         for i, data_list in enumerate(eval_data):
             data_list = to(data_list, device)
             outputs = model(**data_list, epoch=epoch, step=len(eval_data) * epoch + i, engine=engine, train_mode='test')
+
             get_loss_and_acc(outputs, running_loss, running_corrects)
     loss, acc = running_loss.get_average_dicts(), running_corrects.get_average_dicts()
     if 'main' in acc:

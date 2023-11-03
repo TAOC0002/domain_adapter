@@ -72,6 +72,7 @@ def get_default_parser():
     parser.add_argument('--meta-step', default=1, type=int)
     parser.add_argument('--meta-lr', default=1e-3, type=float)
     parser.add_argument('--meta-lambd-lr', default=None, type=float)
+    parser.add_argument('--meta-max-lr', default=None, type=float)
     parser.add_argument('--meta-second-order', type=ast.literal_eval, default=False)
     #parser.add_argument('--batch-aug', action='store_true', default=False)
     #parser.add_argument('--meta-aug', default=1, type=float)
@@ -108,7 +109,7 @@ def get_default_parser():
 
     parser.add_argument('--domain_mixup', action='store_true', default=False)
     parser.add_argument('--domain_bn_shift', action='store_true', default=False)
-    parser.add_argument('--domain_bn_shift_p', type=float, default=1e-2)
+    parser.add_argument('--domain_bn_shift_p', type=float, default=5e-3)
     parser.add_argument('--LAME', action='store_true', default=False)
     parser.add_argument('--online', action='store_true', default=False)
     parser.add_argument('--bn-momentum', action='store_true', default=False)
@@ -120,5 +121,7 @@ def get_default_parser():
 if __name__ == '__main__':
     parser = get_default_parser()
     args = parser.parse_args()
+    if args.meta_max_lr is None:
+        args.meta_max_lr = args.meta_lr
     exp = Experiments(args)
     exp.run()
