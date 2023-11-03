@@ -25,7 +25,7 @@ python main.py \
   --loader=meta \
   --meta-lr=5e-2 \
   --meta-step=1 \
-  --thresh=0.95 \
+  --thresh=0.9 \
   --mix-lambda=0.75 \
   --meta-lambd-lr=5e-2 \
   --with-max \
