@@ -109,7 +109,7 @@ def get_default_parser():
 
     parser.add_argument('--domain_mixup', action='store_true', default=False)
     parser.add_argument('--domain_bn_shift', action='store_true', default=False)
-    parser.add_argument('--domain_bn_shift_p', type=float, default=1e-2)
+    parser.add_argument('--domain_bn_shift_p', type=float, default=5e-3)
     parser.add_argument('--LAME', action='store_true', default=False)
     parser.add_argument('--online', action='store_true', default=False)
     parser.add_argument('--bn-momentum', action='store_true', default=False)

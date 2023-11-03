@@ -2,7 +2,7 @@
 
 python main.py \
   --dataset=PACS \
-  --save-path=Results/Ours/debug/PACS/resnets18_sup_Max_Lambda_gem_t_lr2e-4_meta_lr5e-2_maxlr1e-3_thresh075\
+  --save-path=Results/Ours/debug/PACS/resnets18_sup1_Max_Lambda_gem_t_lr2e-4_meta_lr5e-2_maxlr1e-3_thresh075\
   --gpu=0 \
   --do-train=True \
   --lr=2e-4 \
@@ -18,7 +18,7 @@ python main.py \
   --start-time=0 \
   --times=1 \
   --fc-weight=10.0 \
-  --train=tta_meta_sup \
+  --train=tta_meta_sup1 \
   --eval=tta_meta_sup \
   --s=1 \
   --loss-names=gem-t \
@@ -28,8 +28,9 @@ python main.py \
   --thresh=0.75 \
   --mix-lambda=0.75 \
   --meta-lambd-lr=5e-2 \
-  --with-max \
+  --with-max
   --meta-max-lr=1e-3
+  #--domain_bn_shift
   #--no-inner-lambda
   #--domain_bn_shift
   #--Transform
