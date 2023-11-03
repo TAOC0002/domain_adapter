@@ -55,7 +55,13 @@ class Losses():
         T = self.s *logits.std(0, keepdim=True).mean().detach()
         prob = (logits / T).softmax(1)
         #loss = - ((prob * prob.log()).sum(1) * (T ** 2)).mean()
-        loss = - (prob * prob.log()).sum(1).mean()
+        if self.thresh > 0:
+            conf = prob.max(1)[0] < self.thresh
+            prob = prob[conf]
+        if len(prob) > 0:
+            loss = - (prob * prob.log()).sum(1).mean()
+        else:
+            loss = torch.tensor(0.0)
         return loss
 
     def GEM_SKD(self, logits, **kwargs):
@@ -170,7 +176,7 @@ class EntropyMinimizationHead(Head):
             else:
                 aug_logits = None
             ret.update(self.losses.get_loss(loss_name, logits=logits, backbone=backbone, feats=feats,
-                                            step=step, aug_logits=aug_logits, weight=kwargs['weight']))
+                                           step=step, aug_logits=aug_logits, weight=kwargs['weight']))
         return ret
 
     def do_train(self, backbone, x, label, **kwargs):
