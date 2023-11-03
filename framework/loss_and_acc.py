@@ -569,8 +569,6 @@ def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reductio
             raise Exception("Wrong reduction : {}".format(reduction))
     else:
         total_loss = 0
-        
-    if meta:
-        return total_loss, sup_loss
-    else:
+    if not meta:
         return total_loss
+    return total_loss, sup_loss

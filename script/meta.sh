@@ -1,34 +1,33 @@
 #!/bin/bash
 
-CUDA_VISIBLE_DEVICES="0" python main.py \
+python main.py \
   --dataset=PACS \
-  --save-path=pretrained_models/PACS/resnet18-bs64/best/trial3 \
+  --save-path=Results/Ours/debug/PACS/resnets18_tta_meta_gem_t_lr1e3\
   --gpu=0 \
   --do-train=True \
-  --meta-lr=1e-2 \
-  --meta-lambd-lr=1e-2 \
   --lr=1e-3 \
-  --data-root=../data \
+  --data-root=../../Datasets/DA \
   --replace \
-  --meta-step=2 \
   --meta-second-order=False \
-  --TTA-head=em \
+  --TTA-head em \
   --model=DomainAdaptor \
   --backbone=resnet18 \
   --batch-size=64 \
-  --num-epoch=60 \
-  --exp-num=-1 \
+  --num-epoch=80 \
+  --exp-num -2 \
   --start-time=0 \
-  --times=1 \
+  --times=3 \
   --fc-weight=10.0 \
-  --loader=meta \
-  --mix-lambda=0.75 \
-  --thresh=0.85 \
+  --train=tta_meta \
+  --eval=tta_meta \
   --s=1 \
-  --train=tta_meta_sup1 \
-  --eval=tta_meta_sup \
   --loss-names=gem-t \
-  --domain_bn_shift
+  --loader=meta \
+  --meta-step=1 \
+  --meta-lr=1e-2
+  #--meta-lambd-lr=5e-2 \
+  #--mix-lambda=0.75 \
+  #--thresh=0.75 \
   #--Transform
 
 #python main.py \
