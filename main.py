@@ -1,5 +1,6 @@
 import ast
 import sys
+import math
 import argparse
 
 from framework.exp import Experiments
@@ -115,6 +116,9 @@ def get_default_parser():
     parser.add_argument('--bn-momentum', action='store_true', default=False)
     parser.add_argument('--no-inner-lambda', action='store_true', default=False)
     parser.add_argument('--with-max', action='store_true', default=False)
+    parser.add_argument('--early_stopping_start', type=int, default=math.inf)
+    parser.add_argument('--patience', type=int, default=3)
+
     return parser
 
 
