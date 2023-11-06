@@ -94,9 +94,10 @@ class Losses():
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
-            # passed_samples = torch.count_nonzero(conf).item() / conf.shape[0]
-            # if passed_samples > 0.99:
-            #     print('===============================')
+            all_pass = torch.count_nonzero(conf).item() == conf.shape[0]
+            if all_pass and kwargs['track_all_pass']:
+                print('ALL PASS')
+                res.update({'all_pass': True})
             #     print(str(passed_samples) + " samples passed thresh " + str(self.thresh))
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
             if len(conf_label) > 0:
@@ -174,7 +175,7 @@ class EntropyMinimizationHead(Head):
             else:
                 aug_logits = None
             ret.update(self.losses.get_loss(loss_name, logits=logits, backbone=backbone, feats=feats,
-                                           step=step, aug_logits=aug_logits, weight=kwargs['weight']))
+                                           step=step, aug_logits=aug_logits, weight=kwargs['weight'], track_all_pass = 'track_all_pass' in kwargs))
         return ret
 
     def do_train(self, backbone, x, label, **kwargs):
