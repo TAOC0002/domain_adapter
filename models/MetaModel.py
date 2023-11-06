@@ -110,17 +110,18 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
 
         #optimizers.zero_grad()
         for data in split_data:
-            optimizers.zero_grad()
-            with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
-                if args.bn_momentum:
-                    fnet.set_momentum(0)
-                for _ in range(args.meta_step):
-                    unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
-                    opt_max.step(sup_loss-unsup_loss)
-                #optimizers.zero_grad()
-                losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
-                losses[0].backward()
-            optimizers.step()
+            if args.with_max:
+                optimizers.zero_grad()
+                with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
+                    if args.bn_momentum:
+                        fnet.set_momentum(0)
+                    for _ in range(args.meta_step):
+                        unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
+                        opt_max.step(sup_loss-unsup_loss)
+                    #optimizers.zero_grad()
+                    losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
+                    losses[0].backward()
+                optimizers.step()
             optimizers.zero_grad()
             with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
                 if args.momentum:
