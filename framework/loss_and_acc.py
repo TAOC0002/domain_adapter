@@ -516,9 +516,15 @@ def normalize_acc(d, out):
     out['acc'] = acc
 
 
-def analyze_output_dicts(output_dicts):
-    if 'all_pass' in output_dicts:
-        return None
+def analyze_output_dicts(output_dicts,prefix=None, no_test_time=True):
+    if no_test_time==True:
+        if 'all_pass' in output_dicts and prefix[-4:-1]=='max':
+            return None
+        elif 'all_pass' in output_dicts and prefix[-4:-1]=='min':
+            del output_dicts['all_pass']
+    elif no_test_time==False and 'all_pass' in output_dicts:
+        del output_dicts['all_pass']
+
     output = {}
     for name, dic in output_dicts.items():
         if name in ['out', 'logits', 'log']:
@@ -530,8 +536,8 @@ def analyze_output_dicts(output_dicts):
     return output
 
 
-def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reduction='sum', prefix=None, meta=True):
-    outputs = analyze_output_dicts(output_dicts)
+def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reduction='sum', prefix=None, meta=True, no_test_time=True):
+    outputs = analyze_output_dicts(output_dicts, prefix, no_test_time)
     if outputs == None:
         return None, None
     total_loss = []
