@@ -118,7 +118,6 @@ class GenericEngine(object):
 
         if self.args.do_train:
             for epoch in tqdm(range(self.num_epoch)):
-
                 lr = self.optimizers[0].param_groups[0]['lr'] if isinstance(self.optimizers, (list, tuple)) else self.optimizers.param_groups[0]['lr']
                 print('Epoch: {}/{}, Lr: {:.6f}'.format(self.epoch, self.num_epoch - 1, lr))
                 print('Temporary Best Accuracy is {:.4f} ({:.4f} at Epoch {})'.format(test_acc, best_acc, best_epoch))

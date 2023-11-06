@@ -94,14 +94,12 @@ class Losses():
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
-            if len(conf_label) == len(conf):
-                res = {name: {'loss': torch.tensor(0.0), 'weight': kwargs['weight']}}
-            else:
-                res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
+            loss, sup_loss = None, None
+            if len(conf_label) != len(conf):
+                loss = self.losses[name.lower()](**kwargs)
+            res = {name: {'loss': loss, 'weight': kwargs['weight']}}
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
-            else:
-                sup_loss = torch.tensor(0.0)
             res.update({'sup': {'loss': sup_loss, 'weight': self.sup_weight}})
         else:
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
@@ -154,10 +152,10 @@ class EntropyMinimizationHead(Head):
 
         if self.args.LAME:
             logits = self.do_lame(feats, logits)
-            ret = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+            ret = {'LAME': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         else:
             ret = {
-                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+                'main': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:
