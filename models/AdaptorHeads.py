@@ -90,16 +90,21 @@ class Losses():
         return -logits.norm(dim=1).mean() * 2
 
     def get_loss(self, name, **kwargs):
-        res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight':kwargs['weight']}}
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
+            if len(conf_label) == len(conf):
+                res = {name: {'loss': torch.tensor(0.0), 'weight': kwargs['weight']}}
+            else:
+                res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
             else:
                 sup_loss = torch.tensor(0.0)
             res.update({'sup': {'loss': sup_loss, 'weight': self.sup_weight}})
+        else:
+            res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
         return res
 
 class EntropyMinimizationHead(Head):
@@ -172,6 +177,7 @@ class EntropyMinimizationHead(Head):
             ret.update(self.losses.get_loss(loss_name, logits=logits, backbone=backbone, feats=feats,
                                            step=step, aug_logits=aug_logits, weight=kwargs['weight']))
         return ret
+
 
     def do_train(self, backbone, x, label, **kwargs):
         base_features = backbone(x)

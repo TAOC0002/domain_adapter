@@ -161,8 +161,9 @@ class DomainAdaptor(ERM):
             res.update(self.heads[0].do_test(self.backbone, x, label, model=self, weight=self.train_weights[0], **kwargs))
         elif train_mode == 'ft':
             for i, head in enumerate(self.heads):
-                #res = self.head.do_ft(self.backbone, x, label, model=self, **kwargs)
-                res.update(head.do_ft(self.backbone, x, label, model=self, weight=self.ft_weights[i], **kwargs))
+                res = head.do_ft(self.backbone, x, label, model=self, weight=self.ft_weights[i], **kwargs)
+                if res:
+                    res.update(res)
         else:
             raise Exception("Unexpected mode : {}".format(train_mode))
         return res
