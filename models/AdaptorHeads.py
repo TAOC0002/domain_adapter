@@ -94,10 +94,11 @@ class Losses():
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
-            all_pass = torch.count_nonzero(conf).item() == conf.shape[0]
+            all_pass = torch.count_nonzero(conf).item() >= conf.shape[0] * 1.0
             if all_pass and kwargs['track_all_pass']:
-                print('ALL PASS')
+                # print('ALL PASS')
                 res.update({'all_pass': True})
+                return res
             #     print(str(passed_samples) + " samples passed thresh " + str(self.thresh))
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
             if len(conf_label) > 0:
@@ -154,10 +155,10 @@ class EntropyMinimizationHead(Head):
 
         if self.args.LAME:
             logits = self.do_lame(feats, logits)
-            ret = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+            ret = {'LAME': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         else:
             ret = {
-                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+                'main': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:
