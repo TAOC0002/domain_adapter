@@ -15,8 +15,8 @@ python main.py \
   --exp-num=-2 \
   --start-time=0 \
   --times=5 \
-  --train='deepall' \
-  --eval='deepall' \
+  --train=deepall \
+  --eval=tta_meta \
   --loader='normal' \
   --eval-step=1 \
   --scheduler='step' \

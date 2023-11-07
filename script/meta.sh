@@ -13,10 +13,10 @@ python main.py \
   --model=DomainAdaptor \
   --backbone=resnet18 \
   --batch-size=64 \
-  --num-epoch=80 \
+  --num-epoch=60 \
   --exp-num -2 \
   --start-time=0 \
-  --times=3 \
+  --times=1 \
   --fc-weight=10.0 \
   --train=tta_meta \
   --eval=tta_meta \

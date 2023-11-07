@@ -347,7 +347,7 @@ class PACS(BaseDatasetConfig):
     NumClasses = 7
     SplitRatio = -1
     RelativePath = 'PACS'
-    Domains = ['art_painting', 'cartoon', 'photo', 'sketch']
+    Domains = ['sketch', 'art_painting', 'cartoon', 'photo']
     ClassOffset = -1  # text_lists start from 1 not 0
     Classes = {i : k for i, k in enumerate(['dog', 'elephant', 'giraffe', 'guitar','horse', 'house', 'person'])}
 

@@ -162,8 +162,9 @@ class DomainAdaptor(ERM):
             res.update(self.heads[0].do_test(self.backbone, x, label, model=self, weight=self.train_weights[0], **kwargs))
         elif train_mode == 'ft':
             for i, head in enumerate(self.heads):
-                #res = self.head.do_ft(self.backbone, x, label, model=self, **kwargs)
-                res.update(head.do_ft(self.backbone, x, label, model=self, weight=self.ft_weights[i], **kwargs))
+                res = head.do_ft(self.backbone, x, label, model=self, weight=self.ft_weights[i], **kwargs)
+                if res:
+                    res.update(res)
         else:
             raise Exception("Unexpected mode : {}".format(train_mode))
         return res
@@ -196,12 +197,17 @@ def test_time_adaption(model, eval_data, lr, epoch, args, engine, mode):
     device, optimizers = engine.device, engine.optimizers
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
 
+<<<<<<< HEAD
     model.eval()
     model_to_ft = Models[args.model](num_classes=Datasets[args.dataset](args).NumClasses, 
                                      pretrained=True, args=args).to(torch.device("cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu"))
+=======
+    model_to_ft = copy.deepcopy(model)
+>>>>>>> master
     original_state_dict = model.state_dict()
-
+    model.eval()
     online = args.online
+<<<<<<< HEAD
     model_to_ft.backbone.train()
     lr = args.lr
     print(f'Learning rate : {lr}')
@@ -209,15 +215,17 @@ def test_time_adaption(model, eval_data, lr, epoch, args, engine, mode):
         get_new_optimizers(model, lr=lr, names=['bn'], opt_type='sgd', momentum=online),
     ]
 
+=======
+    optimizers = model_to_ft.setup(online)
+>>>>>>> master
     loss_names = args.loss_names  # 'gem-t', 'gem-skd', 'gem-tta']
 
     with torch.no_grad():
         for i, data in enumerate(eval_data):
             data = to(data, device)
-
             # Normal Test
-            out = model(**data, train_mode='test')
-            get_loss_and_acc(out, running_loss, running_corrects, prefix='ft_original_')
+
+            get_loss_and_acc(model(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
 
             # test-time adaptation to a single batch
             for loss_name in loss_names:
@@ -230,7 +238,7 @@ def test_time_adaption(model, eval_data, lr, epoch, args, engine, mode):
                 # get the adapted result
                 cur_out = model_to_ft(**data, train_mode='test')
 
-                get_loss_and_acc(cur_out, running_loss, running_corrects, prefix=f'ft_{loss_name}_')
+                get_loss_and_acc(cur_out, running_loss, running_corrects, prefix=f'{loss_name}_')
                 if loss_name == loss_names[-1]:
                     get_loss_and_acc(cur_out, running_loss, running_corrects)  # the last one is recorded as the main result
 

@@ -90,21 +90,20 @@ class Losses():
         return -logits.norm(dim=1).mean() * 2
 
     def get_loss(self, name, **kwargs):
-        res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight':kwargs['weight']}}
+        doMax, sup_loss = False, None
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
-            all_pass = torch.count_nonzero(conf).item() == conf.shape[0]
-            if all_pass and kwargs['track_all_pass']:
-                print('ALL PASS')
-                res.update({'all_pass': True})
-            #     print(str(passed_samples) + " samples passed thresh " + str(self.thresh))
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
+            if len(conf_label) < (len(conf) * 0.8):
+                doMax = True
+            res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
-            else:
-                sup_loss = torch.tensor(0.0)
             res.update({'sup': {'loss': sup_loss, 'weight': self.sup_weight}})
+        else:
+            res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
+        res.update({'doMax': doMax})
         return res
 
 class EntropyMinimizationHead(Head):
@@ -154,10 +153,10 @@ class EntropyMinimizationHead(Head):
 
         if self.args.LAME:
             logits = self.do_lame(feats, logits)
-            ret = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+            ret = {'LAME': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         else:
             ret = {
-                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+                'main': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:
@@ -175,8 +174,9 @@ class EntropyMinimizationHead(Head):
             else:
                 aug_logits = None
             ret.update(self.losses.get_loss(loss_name, logits=logits, backbone=backbone, feats=feats,
-                                           step=step, aug_logits=aug_logits, weight=kwargs['weight'], track_all_pass = 'track_all_pass' in kwargs))
+                                           step=step, aug_logits=aug_logits, weight=kwargs['weight']))
         return ret
+
 
     def do_train(self, backbone, x, label, **kwargs):
         base_features = backbone(x)

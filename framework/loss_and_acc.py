@@ -517,11 +517,9 @@ def normalize_acc(d, out):
 
 
 def analyze_output_dicts(output_dicts):
-    if 'all_pass' in output_dicts:
-        return None
     output = {}
     for name, dic in output_dicts.items():
-        if name in ['out', 'logits', 'log']:
+        if name in ['out', 'logits', 'log', 'doMax']:
             continue
         out = {}
         normalize_loss(dic, out)
@@ -530,10 +528,8 @@ def analyze_output_dicts(output_dicts):
     return output
 
 
-def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reduction='sum', prefix=None, meta=True):
+def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reduction='sum', prefix=None):
     outputs = analyze_output_dicts(output_dicts)
-    if outputs == None:
-        return None, None
     total_loss = []
     sup_loss = []
     for name, d in outputs.items():
@@ -573,6 +569,4 @@ def get_loss_and_acc(output_dicts, running_loss=None, running_acc=None, reductio
             raise Exception("Wrong reduction : {}".format(reduction))
     else:
         total_loss = 0
-    if not meta:
-        return total_loss
     return total_loss, sup_loss

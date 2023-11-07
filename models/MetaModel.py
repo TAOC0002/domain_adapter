@@ -110,17 +110,19 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
 
         #optimizers.zero_grad()
         for data in split_data:
-            optimizers.zero_grad()
-            with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
-                if args.bn_momentum:
-                    fnet.set_momentum(0)
-                for _ in range(args.meta_step):
-                    unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
-                    opt_max.step(sup_loss-unsup_loss)
-                #optimizers.zero_grad()
-                losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
-                losses[0].backward()
-            optimizers.step()
+            with torch.no_grad():
+                res = meta_model(**data, train_mode='ft', step=0)
+            if args.with_max and res['doMax']:
+                optimizers.zero_grad()
+                with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
+                    if args.bn_momentum:
+                        fnet.set_momentum(0)
+                    for _ in range(args.meta_step):
+                        unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
+                        opt_max.step(sup_loss-unsup_loss)
+                    losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
+                    losses[0].backward()
+                optimizers.step()
             optimizers.zero_grad()
             with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
                 if args.momentum:
@@ -165,19 +167,19 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
 
         #optimizers.zero_grad()
         for data in split_data:
-            if args.with_max:
+            with torch.no_grad():
+                res = meta_model(**data, train_mode='ft', step=0)
+
+            if args.with_max and res['doMax']:
                 optimizers.zero_grad()
-                if epoch < 5:
-                    with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
-                        if args.bn_momentum:
-                            fnet.set_momentum(0)
-                        for _ in range(args.meta_step):
-                            unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
-                            if unsup_loss and sup_loss:
-                                opt_max.step(sup_loss-unsup_loss)
-                        if unsup_loss and sup_loss:
-                            losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
-                            losses[0].backward()
+                with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
+                    if args.bn_momentum:
+                        fnet.set_momentum(0)
+                    for _ in range(args.meta_step):
+                        unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
+                        opt_max.step(sup_loss-unsup_loss)
+                    losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
+                    losses[0].backward()
             with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
                 if args.momentum:
                     fnet.set_momentum(0)
@@ -219,19 +221,23 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
         with torch.no_grad():
             _, o = get_loss_and_acc(meta_model.step(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
 
-        if args.with_max:
-            with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_max):
-                fnet.train()
-                if args.bn_momentum:
-                    fnet.set_momentum(0)
-                for _ in range(args.meta_step):
-                    unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
-                                                            running_corrects, prefix=f'spt_max_')
-                    opt_max.step(sup_loss - unsup_loss)
 
-                with torch.no_grad():
-                    params, states = get_parameters(fnet)
-                    fast_model = put_parameters(fast_model, params, states)
+        if args.with_max:
+            with torch.no_grad():
+                res = meta_model(**data, train_mode='ft', step=0)
+            if res['doMax']:
+                with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_max):
+                    fnet.train()
+                    if args.bn_momentum:
+                        fnet.set_momentum(0)
+                    for _ in range(args.meta_step):
+                        unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
+                                                                running_corrects, prefix=f'spt_max_')
+                        opt_max.step(sup_loss - unsup_loss)
+
+                    with torch.no_grad():
+                        params, states = get_parameters(fnet)
+                        fast_model = put_parameters(fast_model, params, states)
 
         with higher.innerloop_ctx(fast_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_min):
             fnet.train()
