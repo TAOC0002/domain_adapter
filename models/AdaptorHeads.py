@@ -173,6 +173,7 @@ class EntropyMinimizationHead(Head):
                     aug_logits = backbone(aug_x)[-1].view(n, N, -1).mean(1)
             else:
                 aug_logits = None
+            
             ret.update(self.losses.get_loss(loss_name, logits=logits, backbone=backbone, feats=feats,
                                            step=step, aug_logits=aug_logits, weight=kwargs['weight']))
         return ret
