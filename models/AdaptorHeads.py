@@ -95,7 +95,7 @@ class Losses():
             conf = logits.softmax(1).max(1)[0] > self.thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
             loss, sup_loss = None, None
-            if len(conf_label) != len(conf):
+            if len(conf_label) > (len(conf) * 0.8):
                 loss = self.losses[name.lower()](**kwargs)
             res = {name: {'loss': loss, 'weight': kwargs['weight']}}
             if len(conf_label) > 0:
