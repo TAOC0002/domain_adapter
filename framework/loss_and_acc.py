@@ -519,7 +519,7 @@ def normalize_acc(d, out):
 def analyze_output_dicts(output_dicts):
     output = {}
     for name, dic in output_dicts.items():
-        if name in ['out', 'logits', 'log']:
+        if name in ['out', 'logits', 'log', 'doMax']:
             continue
         out = {}
         normalize_loss(dic, out)
