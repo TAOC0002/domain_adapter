@@ -196,22 +196,19 @@ def test_time_adaption(model, eval_data, lr, epoch, args, engine, mode):
     device, optimizers = engine.device, engine.optimizers
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
 
-    model.eval()
     model_to_ft = copy.deepcopy(model)
     original_state_dict = model.state_dict()
-
+    model.eval()
     online = args.online
     optimizers = model_to_ft.setup(online)
-
     loss_names = args.loss_names  # 'gem-t', 'gem-skd', 'gem-tta']
 
     with torch.no_grad():
         for i, data in enumerate(eval_data):
             data = to(data, device)
-
             # Normal Test
-            out = model(**data, train_mode='test')
-            get_loss_and_acc(out, running_loss, running_corrects, prefix='ft_original_')
+
+            get_loss_and_acc(model(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
 
             # test-time adaptation to a single batch
             for loss_name in loss_names:
@@ -224,7 +221,7 @@ def test_time_adaption(model, eval_data, lr, epoch, args, engine, mode):
                 # get the adapted result
                 cur_out = model_to_ft(**data, train_mode='test')
 
-                get_loss_and_acc(cur_out, running_loss, running_corrects, prefix=f'ft_{loss_name}_')
+                get_loss_and_acc(cur_out, running_loss, running_corrects, prefix=f'{loss_name}_')
                 if loss_name == loss_names[-1]:
                     get_loss_and_acc(cur_out, running_loss, running_corrects)  # the last one is recorded as the main result
 
