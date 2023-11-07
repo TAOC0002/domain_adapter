@@ -144,6 +144,7 @@ class Experiments(object):
     def run_one_exp(self, exp_idx=0, time=0):
         args = deepcopy(self.args)
         args.exp_num = [exp_idx]
+        args.save_path = str(Path(args.save_path) / '{}{}'.format(self.domains[exp_idx], time))
         engine = GenericEngine(args, time)
         test_acc, test_acc_dict = engine.train()
         return test_acc, test_acc_dict

@@ -88,7 +88,7 @@ class GenericEngine(object):
         data_config = Datasets[args.dataset](args)
         self.num_classes = data_config.NumClasses
         self.model = Models[args.model](num_classes=self.num_classes, pretrained=True, args=args).to(self.device)
-        #self.model.head_to(self.device)
+        self.model.head_to(self.device)
         (self.source_train, self.source_val, self.target_test), self.target_domain = self.get_loaders()
         self.optimizers = get_optimizers(self.model, args)
         self.num_epoch, self.schedulers = get_scheduler(args, self.optimizers)
@@ -118,11 +118,6 @@ class GenericEngine(object):
 
         if self.args.do_train:
             for epoch in tqdm(range(self.num_epoch)):
-
-                if epoch > self.args.early_stopping_start and self.epoch - best_epoch > self.args.patience:
-                    print('Early stopping..')
-                    break
-
                 lr = self.optimizers[0].param_groups[0]['lr'] if isinstance(self.optimizers, (list, tuple)) else self.optimizers.param_groups[0]['lr']
                 print('Epoch: {}/{}, Lr: {:.6f}'.format(self.epoch, self.num_epoch - 1, lr))
                 print('Temporary Best Accuracy is {:.4f} ({:.4f} at Epoch {})'.format(test_acc, best_acc, best_epoch))
