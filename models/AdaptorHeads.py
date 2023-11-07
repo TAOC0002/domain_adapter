@@ -90,7 +90,7 @@ class Losses():
         return -logits.norm(dim=1).mean() * 2
 
     def get_loss(self, name, **kwargs):
-        doMax = False
+        doMax, sup_loss = False, None
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
