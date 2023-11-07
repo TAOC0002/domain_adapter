@@ -90,19 +90,20 @@ class Losses():
         return -logits.norm(dim=1).mean() * 2
 
     def get_loss(self, name, **kwargs):
+        doMax = False
         if 'em' in name and self.thresh > 0:
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
-            loss, sup_loss = None, None
-            if len(conf_label) > (len(conf) * 0.8):
-                loss = self.losses[name.lower()](**kwargs)
-            res = {name: {'loss': loss, 'weight': kwargs['weight']}}
+            if len(conf_label) < (len(conf) * 0.8):
+                doMax = True
+            res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
             res.update({'sup': {'loss': sup_loss, 'weight': self.sup_weight}})
         else:
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
+        res.update({'doMax': doMax})
         return res
 
 class EntropyMinimizationHead(Head):

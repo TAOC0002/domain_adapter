@@ -112,9 +112,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         for data in split_data:
             with torch.no_grad():
                 res = meta_model(**data, train_mode='ft', step=0)
-                is_offcenter = res[args.loss_names[0]]['loss']
-
-            if args.with_max and is_offcenter:
+            if args.with_max and res['doMax']:
                 optimizers.zero_grad()
                 with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
                     if args.bn_momentum:
@@ -171,8 +169,8 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
         for data in split_data:
             with torch.no_grad():
                 res = meta_model(**data, train_mode='ft', step=0)
-                is_offcenter = res[args.loss_names[0]]['loss']
-            if args.with_max and is_offcenter:
+
+            if args.with_max and res['doMax']:
                 optimizers.zero_grad()
                 with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
                     if args.bn_momentum:
@@ -227,8 +225,7 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
         if args.with_max:
             with torch.no_grad():
                 res = meta_model(**data, train_mode='ft', step=0)
-                is_offcenter = res[args.loss_names[0]]['loss']
-            if is_offcenter:
+            if res['doMax']:
                 with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_max):
                     fnet.train()
                     if args.bn_momentum:
