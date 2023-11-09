@@ -95,7 +95,8 @@ class Losses():
             logits = kwargs['logits']
             conf = logits.softmax(1).max(1)[0] > self.thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
-            if len(conf_label) < (len(conf) * 0.8):
+            conf_logits -= (conf_logits==torch.max(conf_logits, dim=1, keepdim=True)[0])*3
+            if len(conf_label) < len(conf):
                 doMax = True
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
             if len(conf_label) > 0:
