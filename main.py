@@ -113,7 +113,8 @@ def get_default_parser():
     parser.add_argument('--LAME', action='store_true', default=False)
     parser.add_argument('--online', action='store_true', default=False)
     parser.add_argument('--bn-momentum', action='store_true', default=False)
-    parser.add_argument('--no-inner-lambda', action='store_true', default=False)
+    #parser.add_argument('--no-inner-lambda', action='store_true', default=False)
+    parser.add_argument('--inner', nargs='*', default=['bias', 'weight', 'lambd'], type=str, help='inner learnable parameters')
     parser.add_argument('--with-max', action='store_true', default=False)
     return parser
 
