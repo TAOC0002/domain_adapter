@@ -26,17 +26,8 @@ python main.py \
   --meta-step=1 \
   --meta-lr=5e-2 \
   --mix-lambda=0.75 \
-<<<<<<< HEAD
-  --meta-lambd-lr=5e-2\
-  --with-max \
-  --meta-max-lr=5e-3
-  #--no-inner-lambda
-  #--domain_bn_shift
-  #--Transform
-=======
   --inner bias weight \
   --thresh=0.75 \
   --with-max
   #--Transform
   # --meta-lambd-lr=5e-2 \
->>>>>>> 6b692b359b1c307536b2f09c33637d87cd559963

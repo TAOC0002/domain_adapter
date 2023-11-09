@@ -107,17 +107,10 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
 
         #optimizers.zero_grad()
         for data in split_data:
-<<<<<<< HEAD
-            with torch.no_grad():
-                res = meta_model(**data, train_mode='ft', step=0)
-            if args.with_max and res['doMax']:
-                if epoch < 5:
-=======
             if args.with_max:
                 with torch.no_grad():
                     res = meta_model(**data, train_mode='ft', step=0)
                 if res['doMax']:
->>>>>>> 6b692b359b1c307536b2f09c33637d87cd559963
                     optimizers.zero_grad()
                     with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
                         if args.bn_momentum:
