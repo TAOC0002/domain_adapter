@@ -42,6 +42,7 @@ def get_default_parser():
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--fc-weight', type=float, default=10.0)
     parser.add_argument('--optimizer', type=str, default='sgd')
+    parser.add_argument('--inneropt', type=str, default='sgd')
     parser.add_argument('--opt-split', action='store_true')
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight-decay', type=float, default=5e-4)
@@ -93,7 +94,7 @@ def get_default_parser():
     parser.add_argument('--loss-names', nargs='+', type=str, default=['gem-t'],
                         choices=['em', 'slr', 'norm', 'gem-t', 'gem-skd', 'gem-aug'])
     parser.add_argument('--s', default=1, type=float)
-    parser.add_argument('--thresh', default=0, type=float)
+    parser.add_argument('--sup_thresh', default=0, type=float)
     parser.add_argument('--sup_weight', default=0.1, type=float,
                         help='sup_loss weight for em ssl task')
     parser.add_argument('--main_weight', nargs='+', default=[0], type=float,
@@ -104,18 +105,16 @@ def get_default_parser():
     parser.add_argument('--AdaMixBN', action='store_true', default=True)
     parser.add_argument('--Transform', action='store_true', default=False)
     parser.add_argument('--mix-lambda', type=float, default=None)
-    parser.add_argument('--BN-start', type=int, default=0)
-    parser.add_argument('--BN-end', type=int, default=5)
     parser.add_argument('--epoch', type=int, default=0)
 
     parser.add_argument('--domain_mixup', action='store_true', default=False)
     parser.add_argument('--domain_bn_shift', action='store_true', default=False)
-    parser.add_argument('--domain_bn_shift_p', type=float, default=5e-3)
+    parser.add_argument('--domain_bn_shift_p', type=float, default=2e-2)
     parser.add_argument('--LAME', action='store_true', default=False)
     parser.add_argument('--online', action='store_true', default=False)
     parser.add_argument('--bn-momentum', action='store_true', default=False)
-    #parser.add_argument('--no-inner-lambda', action='store_true', default=False)
     parser.add_argument('--inner', nargs='*', default=['bias', 'weight', 'lambd'], type=str, help='inner learnable parameters')
+    parser.add_argument('--max_bn_layer', nargs='*', type=str, default=['backbone.bn1'])
     parser.add_argument('--with-max', action='store_true', default=False)
     parser.add_argument('--early_stopping_start', type=int, default=math.inf)
     parser.add_argument('--patience', type=int, default=3)

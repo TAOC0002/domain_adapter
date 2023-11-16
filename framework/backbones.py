@@ -2,6 +2,7 @@ import torch.nn as nn
 from torchvision.models import AlexNet
 from torchvision.models import resnet18, resnet50, alexnet
 import torch.nn.functional as F
+import  torch
 
 __all__ = ['AlexNet', 'Resnet']
 
@@ -40,11 +41,10 @@ class Resnet(nn.Module):
         if args.in_ch != 3:
             self.init_conv1(args.in_ch, pretrained)
 
-        self.shift = nn.BatchNorm2d(64, momentum=1)
-        nn.init.constant_(self.shift.weight.data, 1)
-        nn.init.constant_(self.shift.bias.data, 0)
-        for name, param in self.shift.named_parameters():
-            param.requires_grad = False
+        self.shift_weight = torch.empty(1, self.conv1.out_channels, 1, 1, requires_grad=False, device='cuda')
+        self.shift_bias = torch.empty(1,self.conv1.out_channels, 1, 1, requires_grad=False, device='cuda')
+        nn.init.constant_(self.shift_weight, 1)
+        nn.init.constant_(self.shift_bias, 0)
 
     def init_conv1(self, in_ch, pretrained):
         model_inplanes = 64
@@ -55,10 +55,10 @@ class Resnet(nn.Module):
                 self.conv1.weight.data[:, i, :, :] = old_weights[:, i % 3, :, :]
         self.conv1 = conv1
 
-    def forward(self, x, shift=False):
+    def forward(self, x):
         net = self
         x = net.conv1(x)
-        x = net.shift(x)
+        x = net.shift_weight * x + net.shift_bias
         x = net.bn1(x)
         x = net.relu(x)
         x = net.maxpool(x)
