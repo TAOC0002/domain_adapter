@@ -71,7 +71,7 @@ class AdaMixBN(nn.BatchNorm2d):
             return cur_mu, cur_var
         else:
             new_mu = self.lambd * src_mu + (1 - self.lambd) * cur_mu
-            new_var = self.lambd * src_var + (1 - self.lambd) * cur_var
+            new_var = self.lambd * src_var + (1 - self.lambd) * cur_var + (1 - self.lambd)*self.lambd*torch.pow((src_mu-cur_mu), 2)
             return new_mu, new_var
 
     def forward(self, x):
@@ -129,27 +129,28 @@ class DomainAdaptor(ERM):
         self.ft_weights = args.sl_weight
         if args.AdaMixBN:
             self.bns = list(convert_to_target(self.backbone, functools.partial(AdaMixBN, transform=args.Transform, lambd=args.mix_lambda),
-                                              verbose=False, start=args.BN_start, end=args.BN_end, res50=args.backbone == 'resnet50')[-1].values())
+                                              verbose=False, res50=args.backbone == 'resnet50')[-1].values())
 
     def set_momentum(self, momentum):
         for bn in self.bns:
             bn.momentum = momentum
 
     def reset_shift_bn(self):
-        nn.init.constant_(self.backbone.shift.weight.data, 1)
-        nn.init.constant_(self.backbone.shift.bias.data, 0)
+        nn.init.constant_(self.backbone.shift_weight.data, 1)
+        nn.init.constant_(self.backbone.shift_bias.data, 0)
         #for npp, p in self.backbone.bn0.named_parameters():
         #    if npp in ['weight', 'bias']:
         #        with torch.no_grad():
         #            p.data = 0
-
-    def StochasticBNShift(self, e=1e-3):
+    def StochasticBNShift(self, e=2e-2):
         # Stochastic bn shift
-        for npp, p in self.backbone.shift.named_parameters():
-            if npp in ['weight', 'bias']:
-                mask = (torch.rand(p.shape)<e).float().cuda()
-                with torch.no_grad():
-                    p.data = torch.rand(p.shape).float().cuda() * mask + p * (1. - mask)
+        with torch.no_grad():
+            self.reset_shift_bn()
+            mask = (torch.rand(self.backbone.shift_weight.shape)<e).float().cuda()
+            self.backbone.shift_weight = torch.rand(self.backbone.shift_weight.shape).float().cuda() * mask + (1 - mask) * self.backbone.shift_weight
+            mask = (torch.rand(self.backbone.shift_bias.shape) < e).float().cuda()
+            self.backbone.shift_bias = torch.rand(self.backbone.shift_bias.shape).float().cuda() * mask + (
+                        1 - mask) * self.backbone.shift_bias
 
     def step(self, x, label, train_mode='test', **kwargs):
         res = {}

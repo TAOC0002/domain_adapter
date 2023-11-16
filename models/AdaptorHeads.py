@@ -21,7 +21,7 @@ class Head(nn.Module):
         lr = 0.05
         print(f'Learning rate : {lr}')
         return [
-            get_new_optimizers(whole_model, lr=lr, names=['bn'], opt_type='sgd')
+            get_new_optimizers(whole_model, lr=lr, names=['bn'], opt_type='sgd')[0]
         ]
 
     def do_ft(self, backbone, x, label, **kwargs):
@@ -36,7 +36,7 @@ class Head(nn.Module):
         return class_dict
 
 class Losses():
-    def __init__(self, s=1.0, thresh=0, sup_weight=1):
+    def __init__(self, s=1.0, sup_thresh=0, sup_weight=1):
         self.losses = {
             'em': self.em,
             'slr': self.slr,
@@ -46,14 +46,17 @@ class Losses():
             'gem-aug': self.GEM_Aug,
         }
         self.s = s
-        self.thresh = thresh
+        self.sup_thresh = sup_thresh
         self.sup_weight = sup_weight
 
     def GEM_T(self, logits, **kwargs):
         logits = logits - logits.mean(1, keepdim=True).detach()
         #T = self.s *logits.std(1, keepdim=True).detach() * 2
-        T = self.s *logits.std(0, keepdim=True).mean().detach()
-        prob = (logits / T).softmax(1)
+        if logits.shape[0] > 1:
+            T = self.s *logits.std(0, keepdim=True).mean().detach()
+            prob = (logits / T).softmax(1)
+        else:
+            prob = logits.softmax(1)
         #loss = - ((prob * prob.log()).sum(1) * (T ** 2)).mean()
         loss = - (prob * prob.log()).sum(1).mean()
         return loss
@@ -90,20 +93,21 @@ class Losses():
         return -logits.norm(dim=1).mean() * 2
 
     def get_loss(self, name, **kwargs):
-        doMax, sup_loss = False, None
-        if 'em' in name and self.thresh > 0:
+        if 'em' in name and self.sup_thresh > 0:
+            loss, sup_loss = None, None
             logits = kwargs['logits']
-            conf = logits.softmax(1).max(1)[0] > self.thresh
+            conf = logits.softmax(1).max(1)[0]
+            kwargs['logits'] = logits[conf < self.sup_thresh]
+            if len(kwargs['logits']) > 0:
+                loss = self.losses[name.lower()](**kwargs)
+            res = {name: {'loss': loss, 'weight': kwargs['weight']}}
+            conf = conf >= self.sup_thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
-            if len(conf_label) < (len(conf) * 0.8):
-                doMax = True
-            res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
             res.update({'sup': {'loss': sup_loss, 'weight': self.sup_weight}})
         else:
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
-        res.update({'doMax': doMax})
         return res
 
 class EntropyMinimizationHead(Head):
@@ -112,7 +116,7 @@ class EntropyMinimizationHead(Head):
 
     def __init__(self, num_classes, in_ch, args):
         super(EntropyMinimizationHead, self).__init__(num_classes, in_ch, args)
-        self.losses = Losses(s=args.s, sup_weight=args.sup_weight, thresh=args.thresh)
+        self.losses = Losses(s=args.s, sup_weight=args.sup_weight, sup_thresh=args.sup_thresh)
         self.loss_names = args.loss_names
 
     def get_cos_logits(self, feats, backbone):
@@ -194,7 +198,7 @@ class EntropyMinimizationHead(Head):
         lr = self.args.lr
         print(f'Learning rate : {lr}')
         return [
-            get_new_optimizers(model, lr=lr, names=['bn'], opt_type='sgd', momentum=self.args.online),
+            get_new_optimizers(model, lr=lr, names=['bn'], opt_type='sgd', momentum=self.args.online)[0],
         ]
 
 class RotationHead(Head):
@@ -205,7 +209,7 @@ class RotationHead(Head):
         lr = 0.05
         print(f'Learning rate : {lr}')
         return [
-            get_new_optimizers(whole_model, lr=lr, names=['bn'], opt_type='sgd')
+            get_new_optimizers(whole_model, lr=lr, names=['bn'], opt_type='sgd')[0]
         ]
 
     def __init__(self, num_classes, in_ch, args):
@@ -355,7 +359,7 @@ class JigsawHead(Head):
         # not online  : 0.02?
         lr = 0.01 # 0.0005 is better for MDN
         print(f"Learning rate : {lr} ")
-        return get_new_optimizers(whole_model, lr=lr, names=['bn'], opt_type='sgd', momentum=online)
+        return get_new_optimizers(whole_model, lr=lr, names=['bn'], opt_type='sgd', momentum=online)[0]
 
 
 class NoneHead(Head):

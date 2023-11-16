@@ -31,8 +31,9 @@ def collect_module_params(model, module_class, param_names=None, has_strings=[])
     names = []
     nnn = []
     for nm, m in model.named_modules():
-        if has_string(nnn, nm):
+        if has_string(nnn, nm) or 'downsample' in nm :
             continue
+        #if any(l in nm for l in layer_name) or layer_name is None:
         if isinstance(m, module_class) and module_has_string(has_strings, nm):
             named_params = m.named_parameters()
             for np, p in named_params:
@@ -86,8 +87,8 @@ def get_optimizer(opt_dic, lr, opt_type='sgd', momentum=True):
 
 
 def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=None,
-                       opt_type='sgd', lambd_lr=None, momentum=False):
-    optimizers, opt_names = [], []
+                       opt_type='sgd', layers=None, nonpara_name=[], lambd_lr=None, momentum=False):
+    nonpara_name.append('shift')
     classes = {
         'bn': nn.BatchNorm2d,
         'conv': nn.Conv2d,
@@ -96,23 +97,25 @@ def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=N
     opt_dic = []
     if lambd_lr is None:
         lambd_lr = lr
+    added = []
     for name in names:
         name = name.lower()
         params, _names = collect_module_params(model, module_class=classes[name], param_names=param_names)
         for param, n in zip(params, _names):
-            if 'shift' not in n:
+            if layers is not None:
+                 if not any(l in n for l in layers): continue
+            if n not in nonpara_name :
                 if 'lambd' in n:
                     opt_dic.append({'params': param, 'lr': lambd_lr})
                 else:
                     opt_dic.append({'params': param, 'lr': lr})
+                added.append(n)
     opt = get_optimizer(opt_dic, lr, opt_type, momentum)
-    # optimizers.append(opt)
-    # opt_names.append(names)
-    return opt
+    return opt, added
 
 
 
-def convert_to_target(net, norm, start=0, end=5, verbose=True, res50=False):
+def convert_to_target(net, norm, verbose=True, res50=False):
     def convert_norm(old_norm, new_norm, num_features, idx):
         norm_layer = new_norm(num_features, idx=idx).to(net.conv1.weight.device)
         if hasattr(norm_layer, 'load_old_dict'):
@@ -132,8 +135,6 @@ def convert_to_target(net, norm, start=0, end=5, verbose=True, res50=False):
     idx = 0
     converted_bns = {}
     for i, layer in enumerate(layers):
-        if not (start <= i < end):
-            continue
         if i == 0:
             net.bn1 = convert_norm(net.bn1, norm, net.bn1.num_features, idx)
             converted_bns['L0-BN0-0'] = net.bn1
