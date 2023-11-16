@@ -100,12 +100,12 @@ class Losses():
             kwargs['logits'] = logits[conf < self.sup_thresh]
             if len(kwargs['logits']) > 0:
                 loss = self.losses[name.lower()](**kwargs)
-            res = {name: {'loss': loss, 'weight': kwargs['weight']}}
+            res = {name: {'loss': loss, 'weight': 2*len(kwargs['logits'])/len(logits)}}
             conf = conf >= self.sup_thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
-            res.update({'sup': {'loss': sup_loss, 'weight': self.sup_weight}})
+            res.update({'sup': {'loss': sup_loss, 'weight': 2*len(conf_label)/ len(logits)}})
         else:
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
         return res
