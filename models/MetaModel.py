@@ -89,6 +89,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
     if args.domain_mixup:
         mixup_op = MixUp(meta_model.num_classes)
     for data_list in train_data:
+       # print(globalstep)
         data_list = to(data_list, device)
         split_data = split_image_and_label(data_list, size=args.batch_size)
 
@@ -196,6 +197,7 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     step = 0
     for data in eval_data:
         data = to(data, device)
+
         # Normal Test
         with torch.no_grad():
             _, o = get_loss_and_acc(meta_model.step(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
@@ -219,6 +221,7 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
                                                     running_corrects, prefix=f'spt_min_')
                 opt_min.step(sup_loss + unsup_loss)
             get_loss_and_acc(fnet(**data, train_mode='test'), running_loss, running_corrects)
+
 
         step += 1
         if step % 100 == 0:
