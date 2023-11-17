@@ -2,7 +2,7 @@
 
 python main.py \
   --dataset=PACS \
-  --save-path=Results/Ours/debug/PACS/resnets18_sup_gem_t_lambd0.8_lr1e-3_metalr1e-1_shift2e-2_lambdlr3e-1\
+  --save-path=Results/Ours/debug/PACS/resnets18_sup_gem_t_lambd0.8_lr1e-3_metalr1e-1_shift2e-2_lambdlr2e-1\
   --gpu=0 \
   --do-train=True \
   --inneropt=sgd \
@@ -30,7 +30,7 @@ python main.py \
   --inner weight bias lambd\
   --domain_bn_shift \
   --mix-lambda=0.80 \
-  --meta-lambd-lr=3e-1
+  --meta-lambd-lr=2e-1
   #--sup_thresh=0.9 \
   #--with-max \
   #--max_bn_layer layer4 \
