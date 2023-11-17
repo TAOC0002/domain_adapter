@@ -50,13 +50,8 @@ def tta_meta_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
 
     meta_model.eval()
-<<<<<<< HEAD
-    # inner_opt = get_new_optimizers(meta_model, lr=args.meta_lr, lambd_lr=args.meta_lambd_lr, names=['bn'], momentum=args.meta_second_order)
-    inner_opt = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
-=======
     inner_opt, _ = get_new_optimizers(meta_model, opt_type=args.inneropt, lr=args.meta_lr, lambd_lr=args.meta_lambd_lr, names=['bn'], momentum=args.meta_second_order)
     #inner_opt = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
->>>>>>> 752fac8c36b1ebe1f504c89855de92d8006fecf9
     print(f'Inner optimizer: {type(inner_opt).__name__}')
     for data in eval_data:
         data = to(data, device)

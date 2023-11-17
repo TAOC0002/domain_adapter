@@ -6,7 +6,7 @@ python main.py \
   --gpu=0 \
   --do-train=True \
   --inneropt=sgd \
-  --optimizer=sgd\
+  --optimizer=sgd \
   --lr=1e-3 \
   --data-root=../../Datasets/DA \
   --replace \

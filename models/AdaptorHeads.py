@@ -95,7 +95,7 @@ class Losses():
     def get_loss(self, name, **kwargs):
         if 'em' in name and self.sup_thresh > 0:
             loss, sup_loss = None, None
-            logits = kwargs['logits']
+            logits = kwargs['logits'].clone()
             conf = logits.softmax(1).max(1)[0]
             kwargs['logits'] = logits[conf < self.sup_thresh]
             if len(kwargs['logits']) > 0:
@@ -103,18 +103,32 @@ class Losses():
             res = {name: {'loss': loss, 'weight': 2*len(kwargs['logits'])/len(logits)}}
             conf = conf >= self.sup_thresh
             conf_logits, conf_label = logits[conf], logits.argmax(1)[conf]
-<<<<<<< HEAD
-            conf_logits -= (conf_logits==torch.max(conf_logits, dim=1, keepdim=True)[0])*3
-            if len(conf_label) < len(conf):
-                doMax = True
-            res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
-=======
->>>>>>> 752fac8c36b1ebe1f504c89855de92d8006fecf9
             if len(conf_label) > 0:
                 sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
             res.update({'sup': {'loss': sup_loss, 'weight': 2*len(conf_label)/ len(logits)}})
         else:
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
+        return res
+    
+    def get_loss(self, name, **kwargs):
+        if 'em' in name and self.sup_thresh > 0:
+            loss, sup_loss = None, None
+            logits = kwargs['logits']
+            conf = logits.softmax(1).max(1)[0]
+            high = conf >= self.sup_thresh
+            conf_logits, conf_label = logits[high], logits.argmax(1)[high]
+            if len(conf_label) > 0:
+                sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
+            res = {'sup': {'loss': sup_loss, 'weight': 2*len(conf_label)/ len(logits)}}
+            #res= {'sup': {'loss': sup_loss, 'weight': kwargs['weight']}}
+            kwargs['logits'] = logits[conf < self.sup_thresh]
+            if len(kwargs['logits']) > 0:
+                loss = self.losses[name.lower()](**kwargs)
+            res.update({name: {'loss': loss, 'weight': 2*len(kwargs['logits'])/len(logits)}})
+            #res.update({name: {'loss': loss, 'weight': kwargs['weight']}})
+        else:
+            res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
+
         return res
 
 class EntropyMinimizationHead(Head):
