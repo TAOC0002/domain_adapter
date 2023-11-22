@@ -55,7 +55,6 @@ def tta_meta_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     print(f'Inner optimizer: {type(inner_opt).__name__}')
     for data in eval_data:
         data = to(data, device)
-
         with torch.no_grad():  # Normal Test
             get_loss_and_acc(meta_model.step(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
 
@@ -101,6 +100,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
 
         #optimizers.zero_grad()
         for data in split_data:
+
             if args.with_max:
                 optimizers.zero_grad()
                 with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
@@ -110,6 +110,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
                     losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
                     losses[0].backward()
                 optimizers.step()
+
             optimizers.zero_grad()
             with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
                 for _ in range(args.meta_step):
@@ -118,6 +119,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
                 losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
                 losses[0].backward()
             optimizers.step()
+            
             #loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
             #acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
             #print(loss_log + '\n' + acc_log + '\n')
@@ -179,8 +181,9 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
 @EvalFuncs.register('tta_meta_sup')
-def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
+def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, t_sne_global=True, t_sne_local=True):
     #import higher
+    tsne_dir = '/home/taochen/meta-learning/DomainAdaptor/t-sne/'
     device = engine.device
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
     meta_model.reset_shift_bn()
@@ -197,22 +200,29 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     step = 0
     for data in eval_data:
         data = to(data, device)
-
         # Normal Test
         with torch.no_grad():
-            _, o = get_loss_and_acc(meta_model.step(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
+            res = meta_model.step(**data, train_mode='test')
+            _, o = get_loss_and_acc(res, running_loss, running_corrects, prefix='original_')
+            if step in [200, 400, 600] and t_sne_local and epoch in [0, 1, 2, 9]:
+                torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-orig-feats.pt".format(tsne_dir, epoch, step, mode))
+                torch.save(data['label'], "{}epoch{}-step{}-mode_{}-orig-labels.pt".format(tsne_dir, epoch, step, mode))
 
         if args.with_max:
             with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_max):
                 fnet.train()
                 for _ in range(args.meta_step):
-                    unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
-                                                            running_corrects, prefix=f'spt_max_')
+                    res = fnet(**data, train_mode='ft', step=_)
+                    unsup_loss, sup_loss = get_loss_and_acc(res, running_loss, running_corrects, prefix=f'spt_max_')
                     opt_max.step(sup_loss - unsup_loss)
 
                 with torch.no_grad():
                     params, states = get_parameters(fnet)
                     fast_model = put_parameters(fast_model, params, states)
+
+                if step in [200, 400, 600] and t_sne_local and epoch in [0, 1, 2, 9]:
+                    torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-max-feats.pt".format(tsne_dir, epoch, step, mode))
+                    torch.save(data['label'], "{}epoch{}-step{}-mode_{}-max-labels.pt".format(tsne_dir, epoch, step, mode))
 
         with higher.innerloop_ctx(fast_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_min):
             fnet.train()
@@ -220,14 +230,20 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
                 unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                     running_corrects, prefix=f'spt_min_')
                 opt_min.step(sup_loss + unsup_loss)
-            get_loss_and_acc(fnet(**data, train_mode='test'), running_loss, running_corrects)
-
+            res = fnet(**data, train_mode='test')
+            get_loss_and_acc(res, running_loss, running_corrects)
+            if t_sne_global and epoch in [0, 1, 2, 9]:
+                torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-feats.pt".format(tsne_dir, epoch, step, mode))
+                torch.save(data['label'], "{}epoch{}-step{}-mode_{}-labels.pt".format(tsne_dir, epoch, step, mode))
+            elif t_sne_local and step in [200, 400, 600] and epoch in [0, 1, 2, 9]:
+                torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-min-feats.pt".format(tsne_dir, epoch, step, mode))
+                torch.save(data['label'], "{}epoch{}-step{}-mode_{}-min-labels.pt".format(tsne_dir, epoch, step, mode))
 
         step += 1
         if step % 100 == 0:
             loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
             acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
-            print(loss_log + '\n' + acc_log)
+            # print(loss_log + '\n' + acc_log)
     loss, acc = running_loss.get_average_dicts(), running_corrects.get_average_dicts()
     if 'main' in acc:
         return acc['main'], (loss, acc)
