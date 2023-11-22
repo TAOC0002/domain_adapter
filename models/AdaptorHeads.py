@@ -164,7 +164,8 @@ class EntropyMinimizationHead(Head):
             ret = {'LAME': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         else:
             ret = {
-                'main': {'acc_type': 'acc', 'pred': logits, 'target': label}}
+                'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
+                'vis': {'feats': feats}}
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:
@@ -194,7 +195,9 @@ class EntropyMinimizationHead(Head):
             res = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': self.do_lame(feats, logits), 'target': label}}
         else:
             res = {
-                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}}
+                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label},
+                'vis':{'feats':feats}
+            }
         return res
 
     def setup(self, model, online):

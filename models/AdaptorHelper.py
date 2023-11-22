@@ -88,7 +88,6 @@ def get_optimizer(opt_dic, lr, opt_type='sgd', momentum=True):
 
 def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=None,
                        opt_type='sgd', layers=None, nonpara_name=[], lambd_lr=None, momentum=False):
-    nonpara_name.append('shift')
     classes = {
         'bn': nn.BatchNorm2d,
         'conv': nn.Conv2d,
@@ -113,7 +112,45 @@ def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=N
     opt = get_optimizer(opt_dic, lr, opt_type, momentum)
     return opt, added
 
-
+def get_mme_optimizers(model, names=('bn', 'conv', 'fc'), max_L=None, min_L=None,
+                       opt_type='sgd', max_lr=1e-4, min_lr=1e-4, max_param=None, min_param=None, momentum=False):
+    classes = {
+        'bn': nn.BatchNorm2d,
+        'conv': nn.Conv2d,
+        'fc': nn.Linear
+    }
+    max_params = []
+    max_names = []
+    for name in names:
+        name = name.lower()
+        params, _names = collect_module_params(model, module_class=classes[name], param_names=max_param)
+        for param, n in zip(params, _names):
+            if max_L is not None:
+                if not any(l in n for l in max_L): continue
+            max_params.append(param)
+            #max_dic.append({'params': param, 'lr': max_lr})
+            max_names.append(n)
+    min_params = []
+    min_names = []
+    for name in names:
+        name = name.lower()
+        params, _names = collect_module_params(model, module_class=classes[name], param_names=min_param)
+        for param, n in zip(params, _names):
+            if min_L is not None:
+                if not any(l in n for l in min_L): continue
+            if n not in max_names:
+                min_params.append(param)
+                #min_dic.append({'params': param, 'lr': min_lr})
+                min_names.append(n)
+    dic = [{"params": min_params, "lr": min_lr}, {"params": max_params, "lr": max_lr}]
+    if opt_type.lower() == 'sgd':
+        if momentum:
+            opt = torch.optim.SGD(dic, momentum=0.9)
+        else:
+            opt = torch.optim.SGD(dic)
+    if opt_type.lower() == 'adam':
+        opt = torch.optim.Adam(dic, lr=1e-3, betas=(0.9, 0.999))
+    return opt
 
 def convert_to_target(net, norm, verbose=True, res50=False):
     def convert_norm(old_norm, new_norm, num_features, idx):
