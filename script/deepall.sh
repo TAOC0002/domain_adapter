@@ -1,23 +1,23 @@
 #!/bin/bash
 
 python main.py \
-  --dataset='OfficeHome' \
-  --save-path='pretrained_models/resnet50_OfficeHome' \
+  --dataset='cifar10c' \
+  --save-path='pretrained_models/cifar10c/resnet50' \
   --gpu=0 \
   --do-train=True \
   --lr=1e-3 \
-  --data-root = '../../Datasets/DA' \
-  --model='erm' \
+  --data-root='../data' \
+  --model=DomainAdaptor \
   --backbone='resnet50' \
-  --batch-size=128 \
-  --num-epoch=30 \
+  --batch-size=512 \
+  --num-epoch=20 \
   \
-  --exp-num=-2 \
+  --exp-num=1 \
   --start-time=0 \
-  --times=5 \
   --train=deepall \
-  --eval=tta_meta \
+  --eval=deepall \
   --loader='normal' \
   --eval-step=1 \
   --scheduler='step' \
   --lr-decay-gamma=0.1 \
+  --corruption fog \

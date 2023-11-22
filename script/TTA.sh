@@ -1,28 +1,24 @@
 #!/bin/bash
 
 
-python main.py \
-  --dataset=PACS \
-  --save-path=Results/Ours/debug/PACS/resnets18_gem_t_lr1e3\
+CUDA_VISIBLE_DEVICES="1" python main.py \
   --gpu=0 \
-  --do-train=True \
-  --lr=1e-3 \
-  --data-root=../../Datasets/DA \
-  --replace \
-  --meta-second-order=False \
+  --load-path='pretrained_models/cifar10c/resnet50' \
+  --save-path='pretrained_models/cifar10c/resnet50/TTA-gem-t' \
+  --do-train=False \
+  --dataset=cifar10c \
+  --loss-names=gem-t \
+  --TTAug \
+  --TTA-bs=3 \
   --TTA-head=em \
+  --shuffled=True \
+  --eval=tta_ft \
   --model=DomainAdaptor \
-  --backbone=resnet18 \
+  --backbone=resnet50 \
   --batch-size=64 \
-  --num-epoch=60 \
-  --exp-num=-2 \
+  --exp-num=1 \
   --start-time=0 \
   --times=1 \
-  --fc-weight=10.0 \
-  --train=deepall \
-  --eval=tta_meta \
-  --s=1 \
-  --loss-names=gem-t \
-  --loader=normal
+  --corruption fog \
 
 
