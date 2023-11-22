@@ -59,6 +59,7 @@ def get_default_parser():
     parser.add_argument('--min-scale', type=float, default=0.8)
     parser.add_argument('--domain-label', action='store_true')
     parser.add_argument('--data-path', action='store_true')
+    parser.add_argument('--TTA-model-path', type=str)
     parser.add_argument('--workers', type=int, default=8)
     parser.add_argument('--src', nargs='+', type=int, default=[-1])
     parser.add_argument('--tgt', nargs='+', type=int, default=[-1])
@@ -68,6 +69,7 @@ def get_default_parser():
     parser.add_argument('--shuffled', type=ast.literal_eval, default=True)
     parser.add_argument('--test-with-eval', action='store_true')
     parser.add_argument('--small-dataset', action='store_true')
+    parser.add_argument('--corruption', type=str)
 
     # ------ customized parameters ------
     parser.add_argument('--TN', action='store_true')

@@ -136,7 +136,8 @@ class GenericEngine(object):
                     self.save_model(f'{self.epoch}.pt')
 
                 if acc >= best_acc:
-                    best_acc, test_acc, best_epoch = acc, acc_, self.epoch
+                    best_acc, best_epoch = acc, self.epoch
+                    test_acc = acc_
                     self.save_model('model_best.pt')
                 self.epoch += 1
                 self.schedulers.step()
