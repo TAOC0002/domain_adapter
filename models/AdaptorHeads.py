@@ -163,9 +163,9 @@ class EntropyMinimizationHead(Head):
             logits = self.do_lame(feats, logits)
             ret = {'LAME': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         else:
-            ret = {
-                'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
-                'vis': {'feats': feats}}
+             ret = {
+                 'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
+            }
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:
@@ -195,8 +195,20 @@ class EntropyMinimizationHead(Head):
             res = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': self.do_lame(feats, logits), 'target': label}}
         else:
             res = {
+                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}
+            }
+        return res
+
+    def do_test(self, backbone, x, label, **kwargs):
+        base_features = backbone(x)
+        logits, feats = base_features[-1], base_features[-2].mean((2, 3))
+
+        if self.args.LAME:
+            res = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': self.do_lame(feats, logits), 'target': label}}
+        else:
+            res = {
                 'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label},
-                'vis':{'feats':feats}
+                'vis': {'feats': feats}
             }
         return res
 
