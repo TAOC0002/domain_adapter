@@ -87,4 +87,5 @@ if __name__ == '__main__':
     # for dataset in folder.iterdir():
     #     if 'PACS' not in str(dataset):
     #         continue
-    generate_shuffled_text('text_lists/VisDA')
+    modify_image_list_paths('text_lists/VISDA')
+    #generate_shuffled_text('text_lists/VISDA')

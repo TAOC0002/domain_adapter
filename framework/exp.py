@@ -108,7 +108,6 @@ class Experiments(object):
                 print('{} : {:.2f}+-{:.2f}'.format(d, m, s))
                 f.write('{} : {:.2f}+-{:.2f}\n'.format(d, m, s))
             print()
-
             for k in keys:
                 print(k)
                 for i, (d, m, s) in enumerate(zip(names, dict_mean[k], dict_std[k])):
