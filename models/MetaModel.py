@@ -6,6 +6,7 @@ from utils.tensor_utils import to, AverageMeterDict
 from dataloader.augmentations import MixUp
 import higher
 import copy
+import torch
 """
 ARM
 """
@@ -181,7 +182,7 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
 @EvalFuncs.register('tta_meta_sup')
-def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, t_sne_global=True, t_sne_local=True):
+def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, t_sne_global=False, t_sne_local=True):
     #import higher
     tsne_dir = '/home/taochen/meta-learning/DomainAdaptor/t-sne/'
     device = engine.device
@@ -204,7 +205,7 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
         with torch.no_grad():
             res = meta_model.step(**data, train_mode='test')
             _, o = get_loss_and_acc(res, running_loss, running_corrects, prefix='original_')
-            if step in [200, 400, 600] and t_sne_local and epoch in [0, 1, 2, 9]:
+            if t_sne_local and epoch in [0]:
                 torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-orig-feats.pt".format(tsne_dir, epoch, step, mode))
                 torch.save(data['label'], "{}epoch{}-step{}-mode_{}-orig-labels.pt".format(tsne_dir, epoch, step, mode))
 
@@ -215,15 +216,14 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
                     res = fnet(**data, train_mode='ft', step=_)
                     unsup_loss, sup_loss = get_loss_and_acc(res, running_loss, running_corrects, prefix=f'spt_max_')
                     opt_max.step(sup_loss - unsup_loss)
+                    if t_sne_local and epoch in [0]:
+                        torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-max-feats.pt".format(tsne_dir, epoch, step, mode))
+                        torch.save(data['label'], "{}epoch{}-step{}-mode_{}-max-labels.pt".format(tsne_dir, epoch, step, mode))
 
                 with torch.no_grad():
                     params, states = get_parameters(fnet)
                     fast_model = put_parameters(fast_model, params, states)
-
-                if step in [200, 400, 600] and t_sne_local and epoch in [0, 1, 2, 9]:
-                    torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-max-feats.pt".format(tsne_dir, epoch, step, mode))
-                    torch.save(data['label'], "{}epoch{}-step{}-mode_{}-max-labels.pt".format(tsne_dir, epoch, step, mode))
-
+        
         with higher.innerloop_ctx(fast_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_min):
             fnet.train()
             for _ in range(args.meta_step):
@@ -235,7 +235,7 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
             if t_sne_global and epoch in [0, 1, 2, 9]:
                 torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-feats.pt".format(tsne_dir, epoch, step, mode))
                 torch.save(data['label'], "{}epoch{}-step{}-mode_{}-labels.pt".format(tsne_dir, epoch, step, mode))
-            elif t_sne_local and step in [200, 400, 600] and epoch in [0, 1, 2, 9]:
+            if t_sne_local and epoch in [0]:
                 torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-min-feats.pt".format(tsne_dir, epoch, step, mode))
                 torch.save(data['label'], "{}epoch{}-step{}-mode_{}-min-labels.pt".format(tsne_dir, epoch, step, mode))
 

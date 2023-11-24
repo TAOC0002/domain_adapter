@@ -480,15 +480,6 @@ class OfficeHome(BaseDatasetConfig):
     Domains = ['Art', 'Clipart', 'Product', 'RealWorld']
 
 
-@Datasets.register("Office31")
-class Office31(BaseDatasetConfig):
-    Name = 'Office31'
-    NumClasses = 31
-    SplitRatio = 0.9
-    RelativePath = 'office31'
-    Domains = ['amazon', 'dslr', 'webcam']
-
-
 @Datasets.register("MDN")
 @Datasets.register("MiniDomainNet")
 class MiniDomainNet(BaseDatasetConfig):
@@ -521,3 +512,19 @@ class VisDA17(BaseDatasetConfig):
     SplitRatio = -1
     RelativePath = 'visda17'
     Domains = ['train', 'test']
+
+@Datasets.register("ImageNetC")
+class ImageNetC(BaseDatasetConfig):
+    Name = 'ImageNet-C'
+    NumClasses = 1000
+    SplitRatio = 0.9
+    RelativePath = 'imagenet-c'
+    Domains = ['source', 'gaussian_noise_truncated']
+
+@Datasets.register("TinyImageNetC")
+class TinyImageNetC(BaseDatasetConfig):
+    Name = 'Tiny-ImageNet-C'
+    NumClasses = 200
+    SplitRatio = -1
+    RelativePath = ''
+    Domains = ['source', 'brightness']
