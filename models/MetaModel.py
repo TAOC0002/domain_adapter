@@ -300,7 +300,7 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
             _, o = get_loss_and_acc(ret, running_loss, running_corrects, prefix='original_')
             if step %s==0:
                 embd_org.append(ret['vis']['feats'])
-                embd_label.append([data['label'][0].cpu().numpy().tolist() for v in data['label']])
+                embd_label.append(data['label'])
 
         with higher.innerloop_ctx(meta_model, mme_opt, track_higher_grads=False) as (fnet, opt):
             fnet.train()
@@ -309,7 +309,8 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                             running_corrects, prefix=f'spt_max_')
                     opt.step(sup_loss-unsup_loss, override={'lr': max_lrs})
-                unsup_loss, sup_loss = get_loss_and_acc(ret, running_loss,
+
+                unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                     running_corrects, prefix=f'spt_min_')
                 opt.step(sup_loss + unsup_loss, override={'lr': min_lrs})
             with torch.no_grad():
