@@ -98,7 +98,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
     if args.domain_mixup:
         mixup_op = MixUp(meta_model.num_classes)
     for data_list in train_data:
-        print(globalstep)
+
         data_list = to(data_list, device)
         split_data = split_image_and_label(data_list, size=args.batch_size)
 
@@ -201,7 +201,7 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     min_lrs[0] =0
     step = 0
     embd_org, embd_label, embd_max, embd_mme=[], [], [], []
-    s = round(len(eval_data)/10+1)
+    s = round(len(eval_data)/20+1)
     for data in eval_data:
         data = to(data, device)
 
@@ -239,14 +239,16 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
             acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
             print(loss_log + '\n' + acc_log)
     loss, acc = running_loss.get_average_dicts(), running_corrects.get_average_dicts()
-    embd_label = torch.cat(embd_label)
+
     # logger.writer.add_embedding(torch.cat(embd_org), metadata=embd_label, tag='epoch/{}/org'.format(mode))
     # if args.with_max:
     #     logger.writer.add_embedding(torch.cat(embd_max), metadata=embd_label, tag='epoch/{}/max'.format(mode))
     # logger.writer.add_embedding(torch.cat(embd_mme), metadata=embd_label, tag='epoch/{}/mme'.format(mode))
+    embd_label = torch.cat(embd_label)
     logger.writer.add_figure('epoch/{}/org'.format(mode),
                              draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
-    logger.writer.add_figure('epoch/{}/max'.format(mode),
+    if args.with_max:
+        logger.writer.add_figure('epoch/{}/max'.format(mode),
                              draw_tsne(torch.cat(embd_max), embd_label, engine.classes, epoch, mode, 'max_{}'.format(mode)), epoch)
     logger.writer.add_figure('epoch/{}/mme'.format(mode),
                              draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
@@ -287,7 +289,8 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
     min_lrs[0] =0
     print(f'Meta LR_min : {args.meta_lr}, Meta LR max : {args.meta_lambd_lr}')
     step = 0
-    embd_org, embd_label, embd_max, embd_mme = [], [], [], []
+    embd_org, embd_label, embd_mme = [], [], []
+    s = round(len(eval_data)/20+1)
     for data in eval_data:
         data = to(data, device)
 
@@ -295,28 +298,25 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
         with torch.no_grad():
             ret = meta_model.step(**data, train_mode='test')
             _, o = get_loss_and_acc(ret, running_loss, running_corrects, prefix='original_')
-            if step %100==0:
+            if step %s==0:
                 embd_org.append(ret['vis']['feats'])
                 embd_label.append([data['label'][0].cpu().numpy().tolist() for v in data['label']])
 
         with higher.innerloop_ctx(meta_model, mme_opt, track_higher_grads=False) as (fnet, opt):
             fnet.train()
-            opt.zero_grad()
             for _ in range(args.meta_step):
                 if args.with_max:
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                             running_corrects, prefix=f'spt_max_')
                     opt.step(sup_loss-unsup_loss, override={'lr': max_lrs})
-                ret = fnet(**data, train_mode='ft', step=_)
                 unsup_loss, sup_loss = get_loss_and_acc(ret, running_loss,
                                                     running_corrects, prefix=f'spt_min_')
                 opt.step(sup_loss + unsup_loss, override={'lr': min_lrs})
-            res = fnet(**data, train_mode='test')
-            get_loss_and_acc(res, running_loss, running_corrects)
-            if step%100==0:
-                if args.with_max:
-                    embd_max.append(ret['vis']['feats'])
-                embd_mme.append(res['vis']['feats'])
+            with torch.no_grad():
+                ret = fnet.step(**data, train_mode='test')
+                get_loss_and_acc(ret, running_loss, running_corrects)
+            if step%s==0:
+                embd_mme.append(ret['vis']['feats'])
         step += 1
         if step % 100 == 0:
             loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
@@ -327,12 +327,11 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
     #if args.with_max:
     #    logger.writer.add_embedding(torch.stack(embd_max), metadata=embd_label, tag='epoch/{}/max'.format(mode))
     #logger.writer.add_embedding(torch.stack(embd_mme), metadata=embd_label, tag='epoch/{}/mme'.format(mode))
+    embd_label = torch.cat(embd_label)
     logger.writer.add_figure('epoch/{}/org'.format(mode),
-                             draw_tsne(embd_org, embd_label, engine.classes, mode, 'org_{}'.format(mode)), epoch)
-    logger.writer.add_figure('epoch/{}/max'.format(mode),
-                             draw_tsne(embd_max, embd_label, engine.classes, mode, 'max_{}'.format(mode)), epoch)
+                             draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
     logger.writer.add_figure('epoch/{}/mme'.format(mode),
-                             draw_tsne(embd_mme, embd_label, engine.classes, mode, 'mme_{}'.format(mode)), epoch)
+                             draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
 
     if 'main' in acc:
         return acc['main'], (loss, acc)

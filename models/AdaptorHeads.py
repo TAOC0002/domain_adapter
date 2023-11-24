@@ -100,18 +100,18 @@ class Losses():
             high = conf >= self.sup_thresh
             conf_logits, conf_label = logits[high], logits.argmax(1)[high]
             if len(conf_label) > 0:
-                sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
-            res = {'sup': {'loss': sup_loss, 'weight': 2*len(conf_label)/ len(logits)}}
+                sup_loss = nn.functional.cross_entropy(conf_logits, conf_logits.softmax(1))
+                #sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
             #res= {'sup': {'loss': sup_loss, 'weight': 1}}#kwargs['weight']}}
-
+            w = len(conf_label)/len(logits)
             kwargs['logits'] = logits[conf < self.sup_thresh]
             if len(kwargs['logits']) > 0:
                 loss = self.losses[name.lower()](**kwargs)
-            res.update({name: {'loss': loss, 'weight': 2*len(kwargs['logits'])/len(logits)}})
+            res = {'sup': {'loss': sup_loss, 'weight': 2 * w}}
+            res.update({name: {'loss': loss, 'weight': 2 * (1-w)}})
             #res.update({name: {'loss': loss, 'weight': kwargs['weight']}})
         else:
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
-
         return res
 
 class EntropyMinimizationHead(Head):
