@@ -87,6 +87,7 @@ class GenericEngine(object):
         self.device = torch.device("cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu")
         data_config = Datasets[args.dataset](args)
         self.num_classes = data_config.NumClasses
+        self.classes = data_config.Classes
         self.model = Models[args.model](num_classes=self.num_classes, pretrained=True, args=args).to(self.device)
         self.model.head_to(self.device)
         (self.source_train, self.source_val, self.target_test), self.target_domain = self.get_loaders()

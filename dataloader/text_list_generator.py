@@ -82,9 +82,9 @@ def generate_text_list_no_val(folder, save_path):
 
 
 if __name__ == '__main__':
-    generate_text_list_no_val('/data/DataSets/PACS', 'text_lists/PACS')
-    folder = Path('./text_lists')
+    #generate_text_list_no_val('/data/DataSets/PACS', 'text_lists/PACS')
+    #folder = Path('./text_lists')
     # for dataset in folder.iterdir():
     #     if 'PACS' not in str(dataset):
     #         continue
-    generate_shuffled_text('text_lists/ColoredMNIST')
+    generate_shuffled_text('text_lists/VisDA')
