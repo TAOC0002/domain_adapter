@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 import numpy as np
 import re
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import os
 from framework.registry import Datasets
 

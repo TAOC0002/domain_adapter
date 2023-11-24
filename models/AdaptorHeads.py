@@ -100,18 +100,18 @@ class Losses():
             high = conf >= self.sup_thresh
             conf_logits, conf_label = logits[high], logits.argmax(1)[high]
             if len(conf_label) > 0:
-                sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
-            res = {'sup': {'loss': sup_loss, 'weight': 2*len(conf_label)/ len(logits)}}
-            #res= {'sup': {'loss': sup_loss, 'weight': 10 }}#kwargs['weight']}}
-
+                sup_loss = nn.functional.cross_entropy(conf_logits, conf_logits.softmax(1))
+                #sup_loss = nn.functional.cross_entropy(conf_logits, conf_label)
+            #res= {'sup': {'loss': sup_loss, 'weight': 1}}#kwargs['weight']}}
+            w = len(conf_label)/len(logits)
             kwargs['logits'] = logits[conf < self.sup_thresh]
             if len(kwargs['logits']) > 0:
                 loss = self.losses[name.lower()](**kwargs)
-            res.update({name: {'loss': loss, 'weight': 2*len(kwargs['logits'])/len(logits)}})
+            res = {'sup': {'loss': sup_loss, 'weight': 2 * w}}
+            res.update({name: {'loss': loss, 'weight': 2 * (1-w)}})
             #res.update({name: {'loss': loss, 'weight': kwargs['weight']}})
         else:
             res = {name: {'loss': self.losses[name.lower()](**kwargs), 'weight': kwargs['weight']}}
-
         return res
     
     def get_loss(self, name, **kwargs):
@@ -184,9 +184,15 @@ class EntropyMinimizationHead(Head):
             logits = self.do_lame(feats, logits)
             ret = {'LAME': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         else:
+<<<<<<< HEAD
             ret = {
                 'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
                 't-sne': {'feats': feats}}
+=======
+             ret = {
+                 'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
+            }
+>>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:
@@ -216,8 +222,26 @@ class EntropyMinimizationHead(Head):
             res = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': self.do_lame(feats, logits), 'target': label}}
         else:
             res = {
+<<<<<<< HEAD
                 'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label},
                 't-sne': {'feats': feats}}
+=======
+                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}
+            }
+        return res
+
+    def do_test(self, backbone, x, label, **kwargs):
+        base_features = backbone(x)
+        logits, feats = base_features[-1], base_features[-2].mean((2, 3))
+
+        if self.args.LAME:
+            res = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': self.do_lame(feats, logits), 'target': label}}
+        else:
+            res = {
+                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label},
+                'vis': {'feats': feats}
+            }
+>>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
         return res
 
     def setup(self, model, online):
