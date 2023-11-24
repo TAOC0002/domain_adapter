@@ -351,6 +351,17 @@ class PACS(BaseDatasetConfig):
     ClassOffset = -1  # text_lists start from 1 not 0
     Classes = {i : k for i, k in enumerate(['dog', 'elephant', 'giraffe', 'guitar','horse', 'house', 'person'])}
 
+@Datasets.register("VISDA")
+class PACS(BaseDatasetConfig):
+    # PACS follow <MLDG>, official split with 0.9 vs 0.1
+    Name = 'VISDA'
+    NumClasses = 12
+    SplitRatio = -1
+    RelativePath = 'VISDA'
+    Domains = ['real', 'syn']
+    ClassOffset = -1  # text_lists start from 1 not 0
+    Classes = {i : k for i, k in enumerate(['aeroplane',  'bus', 'horse', 'knife', 'person', 'skateboard', 'truck', 'bicycle',
+               'car', 'motorcycle', 'plant', 'train'])}
 
 @Datasets.register("VLCS")
 class VLCS(BaseDatasetConfig):
