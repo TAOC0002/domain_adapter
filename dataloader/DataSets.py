@@ -359,7 +359,7 @@ class PACS(BaseDatasetConfig):
     SplitRatio = -1
     RelativePath = 'VISDA'
     Domains = ['real', 'syn']
-    ClassOffset = -1  # text_lists start from 1 not 0
+    ClassOffset = 0  # text_lists start from 1 not 0
     Classes = {i : k for i, k in enumerate(['aeroplane',  'bus', 'horse', 'knife', 'person', 'skateboard', 'truck', 'bicycle',
                'car', 'motorcycle', 'plant', 'train'])}
 
