@@ -12,7 +12,7 @@ import numpy as np
 """
 ARM
 """
-sub_test = 100
+sub_test = 200
 @TrainFuncs.register('tta_meta')
 def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     #import higher
@@ -303,7 +303,7 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
     print(f'Meta LR_min : {args.meta_lr}, Meta LR max : {args.meta_lambd_lr}')
     step = 0
     embd_org, embd_label, embd_mme = [], [], []
-    s = round(len(eval_data)/20+1)
+    s = round(len(eval_data)/10*args.batch_size/64+1)
     for data in eval_data:
         if  step > maxiter:
             break
