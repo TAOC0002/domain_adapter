@@ -139,6 +139,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
             acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
                                                                     engine.args, engine, mode='test_sub', maxiter=sub_test)
             engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
+            meta_model.train()
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
@@ -191,6 +192,7 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
             acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
                                                                     engine.args, engine, mode='test_sub', maxiter=sub_test )
             engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
+            meta_model.train()
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
