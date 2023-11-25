@@ -12,7 +12,7 @@ import numpy as np
 """
 ARM
 """
-
+sub_test = 10
 @TrainFuncs.register('tta_meta')
 def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     #import higher
@@ -135,10 +135,10 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         optimizers.step()
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
-        if globalstep % 2500 == 0 and ndata>6000:
-            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/2500,
-                                                                    engine.args, engine, mode='test_sub', maxiter=2500)
-            engine.logger.tf_log_file_step('test_sub', globalstep/2500, loss_dict, acc_dict)
+        if globalstep % sub_test == 0 and ndata>3*sub_test:
+            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
+                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test)
+            engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
@@ -187,10 +187,10 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
         optimizers.step()
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
-        if globalstep % 2500 == 0 and ndata>6000:
-            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/2500,
-                                                                    engine.args, engine, mode='test_sub', maxiter=2500)
-            engine.logger.tf_log_file_step('test_sub', globalstep/2500, loss_dict, acc_dict)
+        if globalstep %sub_test  == 0 and ndata>sub_test*3:
+            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
+                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test )
+            engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
@@ -212,9 +212,11 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
     step = 0
     embd_org, embd_label, embd_max, embd_mme=[], [], [], []
     s = round(len(eval_data)/20+1)
-    for data in eval_data and step < maxiter:
-        data = to(data, device)
 
+    for data in eval_data:
+        if  step > maxiter:
+            break
+        data = to(data, device)
         # Normal Test
         with torch.no_grad():
             ret = meta_model.step(**data, train_mode='test')
@@ -300,7 +302,9 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
     step = 0
     embd_org, embd_label, embd_mme = [], [], []
     s = round(len(eval_data)/20+1)
-    for data in eval_data and step < maxiter:
+    for data in eval_data:
+        if  step > maxiter:
+            break
         data = to(data, device)
 
         # Normal Test

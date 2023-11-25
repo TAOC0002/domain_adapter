@@ -3,17 +3,17 @@
 python main.py \
   --dataset=PACS \
   --save-path=Results/Ours/debug/PACS/resnets18_sup_gem_t_olambd0.8_lr1e-3_metalr1e-1_shift4e-2\
+  --data-root=../../Datasets/DA \
+  --backbone=resnet18 \
   --gpu=0 \
   --do-train=True \
   --inneropt=sgd \
   --optimizer=sgd\
   --lr=1e-3 \
-  --data-root=../../Datasets/DA \
   --replace \
   --meta-second-order=False \
   --TTA-head em \
   --model=DomainAdaptor \
-  --backbone=resnet18 \
   --batch-size=64 \
   --num-epoch=65 \
   --exp-num -2 \
