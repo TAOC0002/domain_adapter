@@ -79,16 +79,16 @@ class AdaMixBN(nn.BatchNorm2d):
         new_mu = x.mean((0, 2, 3), keepdims=True)
         new_var = x.var((0, 2, 3), keepdims=True)
 
-        #if self.training:
-        if self.mix:
-            new_mu, new_var = self.get_mu_var(x)
+        if self.training:
+            if self.mix:
+                new_mu, new_var = self.get_mu_var(x)
 
-        # Normalization with new statistics
-        inv_std = 1 / (new_var + self.eps).sqrt()
-        new_x = (x - new_mu) * (inv_std * self.weight.view(1, C, 1, 1)) + self.bias.view(1, C, 1, 1)
-        return new_x
-        #else:
-        #    return super(AdaMixBN, self).forward(x)
+            # Normalization with new statistics
+            inv_std = 1 / (new_var + self.eps).sqrt()
+            new_x = (x - new_mu) * (inv_std * self.weight.view(1, C, 1, 1)) + self.bias.view(1, C, 1, 1)
+            return new_x
+        else:
+            return super(AdaMixBN, self).forward(x)
 
     def reset(self):
         self.rectified_params = None
