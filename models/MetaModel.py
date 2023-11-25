@@ -8,11 +8,11 @@ import higher
 import pandas as pd
 from utils.t_sne import plot_tsne
 from sklearn.manifold import TSNE
-import copy
+import numpy as np
 """
 ARM
 """
-
+sub_test = 200
 @TrainFuncs.register('tta_meta')
 def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     #import higher
@@ -93,7 +93,8 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
     if args.with_max:
         str = str + f'Meta-train Max LR: {args.meta_max_lr}'
     print(str)
-    globalstep = len(train_data) * epoch
+    ndata = len(train_data)
+    globalstep = ndata * epoch
     #randaug_op = TestTimeAug(args)
     if args.domain_mixup:
         mixup_op = MixUp(meta_model.num_classes)
@@ -134,6 +135,11 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         optimizers.step()
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
+        if globalstep % sub_test == 0 and ndata>3*sub_test:
+            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
+                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test)
+            engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
+            meta_model.train()
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
@@ -153,7 +159,8 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
     print(str)
     if args.domain_mixup:
         mixup_op = MixUp(meta_model.num_classes)
-    globalstep = len(train_data) * epoch
+    ndata = len(train_data)
+    globalstep = ndata * epoch
     max_lrs = lrs.copy()
     min_lrs = lrs.copy()
     max_lrs[1:] = [0]*(len(lrs)-1)
@@ -181,11 +188,16 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
         optimizers.step()
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
+        if globalstep %sub_test  == 0 and ndata>sub_test*3:
+            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
+                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test )
+            engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
+            meta_model.train()
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
 @EvalFuncs.register('tta_meta_sup')
-def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
+def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, maxiter=np.inf):
     #import higher
     device = engine.device
     logger = engine.logger
@@ -202,9 +214,11 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     step = 0
     embd_org, embd_label, embd_max, embd_mme=[], [], [], []
     s = round(len(eval_data)/20+1)
-    for data in eval_data:
-        data = to(data, device)
 
+    for data in eval_data:
+        if  step > maxiter:
+            break
+        data = to(data, device)
         # Normal Test
         with torch.no_grad():
             ret = meta_model.step(**data, train_mode='test')
@@ -239,7 +253,6 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode):
             acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
             print(loss_log + '\n' + acc_log)
     loss, acc = running_loss.get_average_dicts(), running_corrects.get_average_dicts()
-
     # logger.writer.add_embedding(torch.cat(embd_org), metadata=embd_label, tag='epoch/{}/org'.format(mode))
     # if args.with_max:
     #     logger.writer.add_embedding(torch.cat(embd_max), metadata=embd_label, tag='epoch/{}/max'.format(mode))
@@ -273,7 +286,7 @@ def draw_tsne(feats, y, classname, epoch, mode, tag, log_dir=None):
         pass
 
 @EvalFuncs.register('tta_meta_sup1')
-def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode):
+def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode, maxiter=np.inf):
     #import higher
     device = engine.device
     logger = engine.logger
@@ -290,8 +303,10 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
     print(f'Meta LR_min : {args.meta_lr}, Meta LR max : {args.meta_lambd_lr}')
     step = 0
     embd_org, embd_label, embd_mme = [], [], []
-    s = round(len(eval_data)/20+1)
+    s = round(len(eval_data)/20*args.batch_size/64+1)
     for data in eval_data:
+        if  step > maxiter:
+            break
         data = to(data, device)
 
         # Normal Test
