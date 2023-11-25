@@ -12,7 +12,7 @@ import numpy as np
 """
 ARM
 """
-sub_test = 10
+sub_test = 100
 @TrainFuncs.register('tta_meta')
 def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     #import higher
