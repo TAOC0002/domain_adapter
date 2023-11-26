@@ -2,7 +2,8 @@
 
 python main.py \
   --dataset='VISDA' \
-  --save-path='Results/VISDA/resnet18_lr1e-3' \
+  #--save-path='Results/VISDA/resnet18_lr1e-3' \
+  --load-path =Results/VISDA/resnet18/resnet18_lr1e-3
   --gpu=0 \
   --do-train=True \
   --lr=1e-3 \

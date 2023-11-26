@@ -49,7 +49,7 @@ def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
 @EvalFuncs.register('tta_meta')
-def tta_meta_test(meta_model, eval_data, lr, epoch, args, engine, mode):
+def tta_meta_test(meta_model, eval_data, lr, epoch, args, engine, mode, maxiter=np.inf):
     #import higher
     device, optimizers = engine.device, engine.optimizers
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
@@ -135,7 +135,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         globalstep += 1
         if globalstep % sub_test == 0 and ndata>3*sub_test:
             acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
-                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test)
+                                                                    engine.args, engine, mode='test_sub', stne=False, maxiter=sub_test)
             engine.logger.tf_log_file_step
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
@@ -188,7 +188,7 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
         globalstep += 1
         if globalstep %sub_test  == 0 and ndata>sub_test*3:
             acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
-                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test )
+                                                                    engine.args, engine, mode='test_sub', stne=False, maxiter=sub_test )
             engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
             meta_model.train()
         #optimizers.step()
@@ -284,7 +284,7 @@ def draw_tsne(feats, y, classname, epoch, mode, tag, log_dir=None):
         pass
 
 @EvalFuncs.register('tta_meta_sup1')
-def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode, maxiter=np.inf):
+def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode, stne=True, maxiter=np.inf):
     #import higher
     device = engine.device
     logger = engine.logger
@@ -311,7 +311,7 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
         with torch.no_grad():
             ret = meta_model.step(**data, train_mode='test')
             _, o = get_loss_and_acc(ret, running_loss, running_corrects, prefix='original_')
-            if step %s==0:
+            if step %s==0 and stne :
                 embd_org.append(ret['vis']['feats'])
                 embd_label.append(data['label'])
 
@@ -329,7 +329,7 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
             with torch.no_grad():
                 ret = fnet.step(**data, train_mode='test')
                 get_loss_and_acc(ret, running_loss, running_corrects)
-            if step%s==0:
+            if step%s==0 and stne:
                 embd_mme.append(ret['vis']['feats'])
         step += 1
         if step % 100 == 0:
@@ -341,11 +341,12 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
     #if args.with_max:
     #    logger.writer.add_embedding(torch.stack(embd_max), metadata=embd_label, tag='epoch/{}/max'.format(mode))
     #logger.writer.add_embedding(torch.stack(embd_mme), metadata=embd_label, tag='epoch/{}/mme'.format(mode))
-    embd_label = torch.cat(embd_label)
-    logger.writer.add_figure('epoch/{}/org'.format(mode),
-                             draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
-    logger.writer.add_figure('epoch/{}/mme'.format(mode),
-                             draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
+    if stne:
+        embd_label = torch.cat(embd_label)
+        logger.writer.add_figure('epoch/{}/org'.format(mode),
+                                 draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
+        logger.writer.add_figure('epoch/{}/mme'.format(mode),
+                                 draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
 
     if 'main' in acc:
         return acc['main'], (loss, acc)

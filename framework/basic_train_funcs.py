@@ -1,3 +1,4 @@
+import numpy
 import torch
 
 from framework.loss_and_acc import get_loss_and_acc
@@ -27,7 +28,7 @@ def deepall_train(model, train_data, lr, epoch, args, engine, mode):
 
 @EvalFuncs.register('meta')
 @EvalFuncs.register('deepall')
-def deepall_eval(model, eval_data, lr, epoch, args, engine, mode):
+def deepall_eval(model, eval_data, lr, epoch, args, engine, mode, maxiter=numpy.inf):
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
     device = engine.device
 
