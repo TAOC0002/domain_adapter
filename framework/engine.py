@@ -143,8 +143,8 @@ class GenericEngine(object):
                 self.epoch += 1
                 self.schedulers.step()
 
-            if self.args.save_last:
-                self.save_model('model_last.pt')
+                if self.args.save_last:
+                    self.save_model('model_last.pt')
 
         if self.args.test_with_eval:
             print('Test with source validation set!!!')

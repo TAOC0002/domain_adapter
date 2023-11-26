@@ -194,11 +194,7 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
 @EvalFuncs.register('tta_meta_sup')
-<<<<<<< HEAD
-def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, t_sne_global=True, t_sne_local=True):
-=======
 def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, maxiter=np.inf):
->>>>>>> 4102d32f2230bf6c4a31a9af9ca5d761066932ef
     #import higher
     tsne_dir = '/home/taochen/meta-learning/DomainAdaptor/t-sne/'
     device = engine.device
@@ -216,14 +212,10 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
     step = 0
     embd_org, embd_label, embd_max, embd_mme=[], [], [], []
     s = round(len(eval_data)/20+1)
-<<<<<<< HEAD
-    for data in eval_data:
-=======
 
     for data in eval_data:
         if  step > maxiter:
             break
->>>>>>> 4102d32f2230bf6c4a31a9af9ca5d761066932ef
         data = to(data, device)
         # Normal Test
         with torch.no_grad():
@@ -322,11 +314,6 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
             if step %s==0:
                 embd_org.append(ret['vis']['feats'])
                 embd_label.append(data['label'])
-<<<<<<< HEAD
-                
-=======
-
->>>>>>> 4102d32f2230bf6c4a31a9af9ca5d761066932ef
         with higher.innerloop_ctx(meta_model, mme_opt, track_higher_grads=False) as (fnet, opt):
             fnet.train()
             for _ in range(args.meta_step):
@@ -334,14 +321,9 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                             running_corrects, prefix=f'spt_max_')
                     opt.step(sup_loss-unsup_loss, override={'lr': max_lrs})
-<<<<<<< HEAD
-                unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
-                                    running_corrects, prefix=f'spt_min_')
-=======
 
                 unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                     running_corrects, prefix=f'spt_min_')
->>>>>>> 4102d32f2230bf6c4a31a9af9ca5d761066932ef
                 opt.step(sup_loss + unsup_loss, override={'lr': min_lrs})
             with torch.no_grad():
                 ret = fnet.step(**data, train_mode='test')
