@@ -89,7 +89,7 @@ class GenericEngine(object):
         self.num_classes = data_config.NumClasses
         self.classes = data_config.Classes
         self.model = Models[args.model](num_classes=self.num_classes, pretrained=True, args=args).to(self.device)
-        self.model.head_to(self.device)
+        #self.model.head_to(self.device)
         (self.source_train, self.source_val, self.target_test), self.target_domain = self.get_loaders()
         self.optimizers = get_optimizers(self.model, args)
         self.num_epoch, self.schedulers = get_scheduler(args, self.optimizers)
@@ -130,7 +130,7 @@ class GenericEngine(object):
                     acc, (loss_dict, acc_dict) = EvalFuncs[self.args.eval](self.model, self.source_val, lr, self.epoch, self.args, self, mode='eval')
                     self.logger.log('eval', self.epoch, loss_dict, acc_dict)
 
-                    acc_, (loss_dict, acc_dict) = EvalFuncs[self.args.eval](self.model, self.target_test, lr, self.epoch, self.args, self, mode='test')
+                    acc_, (loss_dict, acc_dict) = EvalFuncs[self.args.eval](self.model, self.target_test, lr, self.epoch, self.args, self, mode='test', maxiter=200)
                     self.logger.log('test', self.epoch, loss_dict, acc_dict)
 
                 if self.epoch > 0 and self.epoch % self.args.save_step == 0 and self.epoch >= self.args.start_save_epoch:

@@ -1,20 +1,18 @@
 #!/bin/bash
 
 python main.py \
-  --dataset='OfficeHome' \
-  --save-path='pretrained_models/resnet50_OfficeHome' \
+  --dataset='VISDA' \
+  --save-path='Results/VISDA/resnet18_lr1e-3' \
   --gpu=0 \
   --do-train=True \
   --lr=1e-3 \
-  --data-root = '../../Datasets/DA' \
-  --model='erm' \
-  --backbone='resnet50' \
-  --batch-size=128 \
+  --data-root ='../../Datasets/DA' \
+  --backbone='resnet18' \
+  --batch-size=64 \
   --num-epoch=30 \
-  \
   --exp-num=-2 \
   --start-time=0 \
-  --times=5 \
+  --times=1 \
   --train=deepall \
   --eval=tta_meta \
   --loader='normal' \

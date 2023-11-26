@@ -61,6 +61,15 @@ def generate_shuffled_text(dataset_path):
             shuffle_text(str(file), target_file_name)
             print(f'generated {target_file_name}')
 
+def getval(sfile, tfile, sample=10):
+    with Path(sfile).open('r') as f:
+        lines = f.readlines()
+
+    with Path(tfile).open('w') as f:
+        for i, l in enumerate(lines):
+            if i%sample==0:
+                f.write(l)
+
 
 def generate_text_list_no_val(folder, save_path):
     folder, save_path = Path(folder), Path(save_path)
@@ -87,4 +96,7 @@ if __name__ == '__main__':
     # for dataset in folder.iterdir():
     #     if 'PACS' not in str(dataset):
     #         continue
-    generate_shuffled_text('text_lists/VisDA')
+    #modify_image_list_paths('text_lists/VISDA')
+    #generate_shuffled_text('text_lists/VISDA')
+    getval('text_lists/VISDA/syn_train.txt','text_lists/VISDA/syn_val.txt', sample=100)
+
