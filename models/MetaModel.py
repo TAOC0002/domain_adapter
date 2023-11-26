@@ -22,6 +22,7 @@ def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     inner_opt_conv, _ = get_new_optimizers(meta_model, opt_type=args.inneropt, lr=args.meta_lr,
                                         lambd_lr=args.meta_lambd_lr, names=['bn'], momentum=args.meta_second_order)
     #inner_opt_conv = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
+    #inner_opt_conv = get_new_optimizers(meta_model, lr=args.meta_lr, names=['bn'], param_names=['bias', 'weight'], momentum=args.meta_second_order)
     print(f'Meta LR : {args.meta_lr}')
 
     globalstep = len(train_data) * epoch
@@ -135,8 +136,7 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         if globalstep % sub_test == 0 and ndata>3*sub_test:
             acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
                                                                     engine.args, engine, mode='test_sub', maxiter=sub_test)
-            engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
-            meta_model.train()
+            engine.logger.tf_log_file_step
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
@@ -301,7 +301,7 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode,
     print(f'Meta LR_min : {args.meta_lr}, Meta LR max : {args.meta_lambd_lr}')
     step = 0
     embd_org, embd_label, embd_mme = [], [], []
-    s = round(len(eval_data)/10*args.batchsize/64+1)
+    s = round(len(eval_data)/10*args.batch_size/64+1)
     for data in eval_data:
         if  step > maxiter:
             break
