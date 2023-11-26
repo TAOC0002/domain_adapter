@@ -106,40 +106,36 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         if args.domain_mixup:
             split_data = mixup_op(split_data)
         #optimizers.zero_grad()
-        if args.with_max:
-            optimizers.zero_grad()
-            for data in split_data:
-                if args.domain_bn_shift:
-                    meta_model.StochasticBNShift(args.domain_bn_shift_p)
-                with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
-                    for _ in range(args.meta_step):
+        for _ in range(args.meta_step):
+            if args.with_max:
+                optimizers.zero_grad()
+                for data in split_data:
+                    if args.domain_bn_shift:
+                        meta_model.StochasticBNShift(args.domain_bn_shift_p)
+
+                    with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
                         unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
                         opt_max.step(sup_loss-unsup_loss)
                     losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
                     losses[0].backward()
+                optimizers.step()
+            optimizers.zero_grad()
+            for data in split_data:
+                if args.domain_bn_shift:
+                    meta_model.StochasticBNShift(args.domain_bn_shift_p)
+                with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
+                    for _ in range(args.meta_step):
+                        unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_ ), running_loss, running_corrects, prefix=f'spt_min_')
+                        opt_min.step(sup_loss + unsup_loss)
+                    losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
+                    losses[0].backward()
             optimizers.step()
-        optimizers.zero_grad()
-        # for param in inner_opt.param_groups[1]["params"]:
-        #     param.requires_grad = False
-        # for param in inner_opt.param_groups[0]["params"]:
-        #     param.requires_grad = True
-        for data in split_data:
-            if args.domain_bn_shift:
-                meta_model.StochasticBNShift(args.domain_bn_shift_p)
-            with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
-                for _ in range(args.meta_step):
-                    unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_ ), running_loss, running_corrects, prefix=f'spt_min_')
-                    opt_min.step(sup_loss + unsup_loss)
-                losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
-                losses[0].backward()
-        optimizers.step()
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
         if globalstep % sub_test == 0 and ndata>3*sub_test:
             acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
                                                                     engine.args, engine, mode='test_sub', maxiter=sub_test)
-            engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
-            meta_model.train()
+            engine.logger.tf_log_file_step
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
