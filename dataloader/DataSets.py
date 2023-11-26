@@ -2,6 +2,7 @@ import copy
 import os
 import threading
 from pathlib import Path
+
 import torch
 import functools
 import numpy as np
@@ -15,6 +16,7 @@ from framework.registry import Datasets
 from utils.tensor_utils import Timer
 
 IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp')
+
 
 class MetaDataLoader(DataLoader):
     def __init__(self, *args, **kwargs):
@@ -111,112 +113,6 @@ class DGDataset(Dataset):
             ret.update({'data_path': path})
         return ret
 
-def load_corruption(path):
-    data = np.load(path, allow_pickle=True)
-    return data
-
-def load_cifar(path):
-    import pickle as cPickle
-    with open(path, 'rb') as fo:
-        dict = cPickle.load(fo, encoding='latin1')
-    return dict
-
-class CIFARDataset(Dataset):
-    def __init__(self, args, split):
-        
-        self.args = args
-        self.root_dir = '/home/taochen/meta-learning/data'
-        self.img_size = 224
-        self.min_scale = 0.8
-        self.pre_transform, self.transform = self.set_transform(split)
-        corruptions = ['brightness', 'contrast', 'defocus_blur', 'elastic_transform', 'fog', 'frost',
-                       'gaussian_noise', 'gaussian_blur', 'glass_blur', 'impulse_noise', 'jpeg_compression',
-                       'motion_blur', 'pixelate', 'saturate', 'shot_noise', 'snow', 'spatter', 'speckle_noise',
-                       'zoom_blur']
-
-        if split == 'train':
-            # self.root_dir += '/cifar-10-batches-py/data_batch_'
-            # imgs = [load_cifar(self.root_dir + str(batch_num)) for batch_num in range(1, 6)]
-            # data = [img['data'].reshape(-1, 32, 32, 3) for img in imgs]
-            # labels = [img['labels'] for img in imgs]
-            # self._X = np.concatenate(data, axis=0)
-            # self._y = np.concatenate(labels, axis=0)
-            # self._len = len(self._y)
-            self.root_dir += '/CIFAR-10-C/'
-            imgs = [load_corruption(self.root_dir + corruption + '.npy') for corruption in corruptions if corruption is not self.args.corruption]
-            data = [img.reshape(-1, 32, 32, 3)[:1000] for img in imgs]
-            self._X = np.concatenate(data, axis=0)
-            labels = np.load(self.root_dir + 'labels.npy')[:1000]
-            self._y = np.tile(labels, len(imgs))
-            self._len = len(self._y)
-        
-        if split == 'val':
-            # self.root_dir += '/cifar-10-batches-py/test_batch'
-            # imgs = load_cifar(self.root_dir)
-            # self._X = imgs['data'].reshape(-1, 32, 32, 3)
-            # self._y = imgs['labels']
-            # self._len = len(self._y)
-            self.root_dir += '/CIFAR-10-C/'
-            imgs = [load_corruption(self.root_dir + corruption + '.npy') for corruption in corruptions if corruption is not self.args.corruption]
-            data = [img.reshape(-1, 32, 32, 3)[-1000:] for img in imgs]
-            self._X = np.concatenate(data, axis=0)
-            labels = np.load(self.root_dir + 'labels.npy')[-1000:]
-            self._y = np.tile(labels, len(imgs))
-            self._len = len(self._y)
-
-        if split == 'test':
-            self.root_dir += '/CIFAR-10-C/'
-            self._X = load_corruption(self.root_dir + self.args.corruption + '.npy')
-            self._X = self._X.reshape((-1, 32, 32, 3))[-10000:]
-            self._y = np.load(self.root_dir + 'labels.npy')[-10000:]
-            self._len = len(self._y)
-
-        print("loading cifar-10-c")
-        self.num_classes = 10
-        print("loaded")
-        print("split: ", split)
-        print("Dataset size: ", len(self._y))
-
-    def __len__(self):
-        return self._len
-    
-    def set_transform(self, split):
-        transform = [
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]
-
-        if split == 'train' and not self.args.do_not_transform:
-            pre_transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.RandomResizedCrop(self.img_size, scale=(self.min_scale, 1.0)),
-                transforms.RandomHorizontalFlip()]
-            )
-            if True:
-                transform.insert(0, transforms.ColorJitter(.4, .4, .4, .4))
-        else:
-            pre_transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.Resize((self.img_size, self.img_size))
-            ])
-
-        return pre_transform, transforms.Compose(transform)
-    
-    def __getitem__(self, index):
-        ret = {}
-        # x = self.transform(**{'image': self._X[index]})['image']
-        intermediate = self.pre_transform(self._X[index])
-        x = self.transform(intermediate)
-        y = torch.tensor(self._y[index], dtype=torch.long)
-        ret.update({'x': x, 'label': y})
-
-        return ret
-    
-
-def load_cifar10c_datasets(args, mode):
-    # source = CIFARDataset(args, 'train')
-    # train_dataset, val_dataset = random_split(source, [0.9, 0.1])
-    return CIFARDataset(args, mode)
 
 class BaseDatasetConfig(object):
     Name = 'Base'
@@ -292,16 +188,12 @@ class BaseDatasetConfig(object):
         domains = self.source_domains if mode != 'test' else self.target_domains
         all_samples = []
         for i, d in enumerate(domains):
-            if self.args.dataset == 'cifar10c':
-                dataset = load_cifar10c_datasets(self.args, mode)
-                datasets.append(dataset)
-            else:
-                samples = self.load_text(d, mode, i)
-                dataset = DGDataset(samples, mode, self.args, self.aug_funcs)
-                datasets.append(dataset)
-                all_samples.extend(samples)
-                print(f"{mode}: len({d})={len(samples)}", end=', ')
-            print()
+            samples = self.load_text(d, mode, i)
+            dataset = DGDataset(samples, mode, self.args, self.aug_funcs)
+            datasets.append(dataset)
+            all_samples.extend(samples)
+            print(f"{mode}: len({d})={len(samples)}", end=', ')
+        print()
         return datasets, all_samples
 
     def preload_images(self, samples):
@@ -467,7 +359,7 @@ class PACS(BaseDatasetConfig):
     SplitRatio = -1
     RelativePath = 'VISDA'
     Domains = ['real', 'syn']
-    ClassOffset = -1  # text_lists start from 1 not 0
+    ClassOffset = 0  # text_lists start from 1 not 0
     Classes = {i : k for i, k in enumerate(['aeroplane',  'bus', 'horse', 'knife', 'person', 'skateboard', 'truck', 'bicycle',
                'car', 'motorcycle', 'plant', 'train'])}
 
@@ -500,26 +392,26 @@ class MiniDomainNet(BaseDatasetConfig):
     RelativePath = 'DomainNet'
     Domains = ['clipart', 'painting', 'real', 'sketch']
 
+@Datasets.register("TinyImageNetC")
+class TinyImageNetC(BaseDatasetConfig):
+    Name = 'Tiny-ImageNet-C'
+    NumClasses = 200
+    SplitRatio = -1
+    RelativePath = ''
+    Domains = ['source', 'brightness']
+
 @Datasets.register("Office31")
-class Office31(BaseDatasetConfig):
+class MiniDomainNet(BaseDatasetConfig):
     Name = 'Office31'
     NumClasses = 31
     SplitRatio = 0.9
-    RelativePath = 'office31'
+    RelativePath = 'Office31'
     Domains = ['amazon', 'dslr', 'webcam']
-
-@Datasets.register("cifar10c")
-class CIFAR10_C(BaseDatasetConfig):
-    Name = 'CIFAR10-C'
-    NumClasses = 10
-    SplitRatio = -1
-    RelativePath = ''
-    Domains = ['train', 'test']
 
 @Datasets.register("VisDA17")
 class VisDA17(BaseDatasetConfig):
     Name = 'VisDA17'
-    NumClasses = 17
+    NumClasses = 12
     SplitRatio = -1
-    RelativePath = 'visda17'
-    Domains = ['train', 'test']
+    RelativePath = 'VisDA17'
+    Domains = ['syn', 'real']

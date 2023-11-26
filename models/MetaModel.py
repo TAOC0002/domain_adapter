@@ -104,29 +104,17 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         if args.domain_mixup:
             split_data = mixup_op(split_data)
         #optimizers.zero_grad()
-<<<<<<< HEAD
-        for data in split_data:
-
-            if args.with_max:
-                optimizers.zero_grad()
-=======
         if args.with_max:
             optimizers.zero_grad()
             for data in split_data:
                 if args.domain_bn_shift:
                     meta_model.StochasticBNShift(args.domain_bn_shift_p)
->>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
                 with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
                     for _ in range(args.meta_step):
                         unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
                         opt_max.step(sup_loss-unsup_loss)
                     losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
                     losses[0].backward()
-<<<<<<< HEAD
-                optimizers.step()
-
-            optimizers.zero_grad()
-=======
             optimizers.step()
         optimizers.zero_grad()
         # for param in inner_opt.param_groups[1]["params"]:
@@ -136,22 +124,13 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         for data in split_data:
             if args.domain_bn_shift:
                 meta_model.StochasticBNShift(args.domain_bn_shift_p)
->>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
             with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
                 for _ in range(args.meta_step):
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_ ), running_loss, running_corrects, prefix=f'spt_min_')
                     opt_min.step(sup_loss + unsup_loss)
                 losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
                 losses[0].backward()
-<<<<<<< HEAD
-            optimizers.step()
-            
-            #loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
-            #acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
-            #print(loss_log + '\n' + acc_log + '\n')
-=======
         optimizers.step()
->>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
         #optimizers.step()
@@ -227,53 +206,16 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
         data = to(data, device)
         # Normal Test
         with torch.no_grad():
-<<<<<<< HEAD
-            res = meta_model.step(**data, train_mode='test')
-            _, o = get_loss_and_acc(res, running_loss, running_corrects, prefix='original_')
-            if step in [200, 400, 600] and t_sne_local and epoch in [0, 1, 2, 9]:
-                torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-orig-feats.pt".format(tsne_dir, epoch, step, mode))
-                torch.save(data['label'], "{}epoch{}-step{}-mode_{}-orig-labels.pt".format(tsne_dir, epoch, step, mode))
-=======
             ret = meta_model.step(**data, train_mode='test')
             _, o = get_loss_and_acc(ret, running_loss, running_corrects, prefix='original_')
             if step % s==0:
                 embd_org.append(ret['vis']['feats'])
                 embd_label.append(data['label'])
->>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
 
         with higher.innerloop_ctx(meta_model, mme_opt, track_higher_grads=False) as (fnet, opt):
             fnet.train()
             if args.with_max:
                 for _ in range(args.meta_step):
-<<<<<<< HEAD
-                    res = fnet(**data, train_mode='ft', step=_)
-                    unsup_loss, sup_loss = get_loss_and_acc(res, running_loss, running_corrects, prefix=f'spt_max_')
-                    opt_max.step(sup_loss - unsup_loss)
-
-                with torch.no_grad():
-                    params, states = get_parameters(fnet)
-                    fast_model = put_parameters(fast_model, params, states)
-
-                if step in [200, 400, 600] and t_sne_local and epoch in [0, 1, 2, 9]:
-                    torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-max-feats.pt".format(tsne_dir, epoch, step, mode))
-                    torch.save(data['label'], "{}epoch{}-step{}-mode_{}-max-labels.pt".format(tsne_dir, epoch, step, mode))
-
-        with higher.innerloop_ctx(fast_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=False) as (fnet, opt_min):
-            fnet.train()
-            for _ in range(args.meta_step):
-                unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
-                                                    running_corrects, prefix=f'spt_min_')
-                opt_min.step(sup_loss + unsup_loss)
-            res = fnet(**data, train_mode='test')
-            get_loss_and_acc(res, running_loss, running_corrects)
-            if t_sne_global and epoch in [0, 1, 2, 9]:
-                torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-feats.pt".format(tsne_dir, epoch, step, mode))
-                torch.save(data['label'], "{}epoch{}-step{}-mode_{}-labels.pt".format(tsne_dir, epoch, step, mode))
-            elif t_sne_local and step in [200, 400, 600] and epoch in [0, 1, 2, 9]:
-                torch.save(res['t-sne']['feats'], "{}epoch{}-step{}-mode_{}-min-feats.pt".format(tsne_dir, epoch, step, mode))
-                torch.save(data['label'], "{}epoch{}-step{}-mode_{}-min-labels.pt".format(tsne_dir, epoch, step, mode))
-
-=======
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                                 running_corrects, prefix=f'spt_max_')
                     opt.step(sup_loss - unsup_loss, override={'lr': max_lrs})
@@ -290,7 +232,6 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
                 get_loss_and_acc(ret, running_loss, running_corrects)
             if step % s==0:
                 embd_mme.append(ret['vis']['feats'])
->>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
         step += 1
         if step % 100 == 0:
             loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
@@ -303,13 +244,13 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
     #     logger.writer.add_embedding(torch.cat(embd_max), metadata=embd_label, tag='epoch/{}/max'.format(mode))
     # logger.writer.add_embedding(torch.cat(embd_mme), metadata=embd_label, tag='epoch/{}/mme'.format(mode))
     embd_label = torch.cat(embd_label)
-    logger.writer.add_figure('epoch/{}/org'.format(mode),
-                             draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
-    if args.with_max:
-        logger.writer.add_figure('epoch/{}/max'.format(mode),
-                             draw_tsne(torch.cat(embd_max), embd_label, engine.classes, epoch, mode, 'max_{}'.format(mode)), epoch)
-    logger.writer.add_figure('epoch/{}/mme'.format(mode),
-                             draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
+    # logger.writer.add_figure('epoch/{}/org'.format(mode),
+    #                          draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
+    # if args.with_max:
+    #     logger.writer.add_figure('epoch/{}/max'.format(mode),
+    #                          draw_tsne(torch.cat(embd_max), embd_label, engine.classes, epoch, mode, 'max_{}'.format(mode)), epoch)
+    # logger.writer.add_figure('epoch/{}/mme'.format(mode),
+    #                          draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
 
     if 'main' in acc:
         return acc['main'], (loss, acc)
@@ -358,8 +299,8 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
             _, o = get_loss_and_acc(ret, running_loss, running_corrects, prefix='original_')
             if step %s==0:
                 embd_org.append(ret['vis']['feats'])
-                embd_label.append([data['label'][0].cpu().numpy().tolist() for v in data['label']])
-
+                embd_label.append(data['label'])
+                
         with higher.innerloop_ctx(meta_model, mme_opt, track_higher_grads=False) as (fnet, opt):
             fnet.train()
             for _ in range(args.meta_step):
@@ -367,8 +308,8 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                             running_corrects, prefix=f'spt_max_')
                     opt.step(sup_loss-unsup_loss, override={'lr': max_lrs})
-                unsup_loss, sup_loss = get_loss_and_acc(ret, running_loss,
-                                                    running_corrects, prefix=f'spt_min_')
+                unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
+                                    running_corrects, prefix=f'spt_min_')
                 opt.step(sup_loss + unsup_loss, override={'lr': min_lrs})
             with torch.no_grad():
                 ret = fnet.step(**data, train_mode='test')
@@ -386,10 +327,10 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
     #    logger.writer.add_embedding(torch.stack(embd_max), metadata=embd_label, tag='epoch/{}/max'.format(mode))
     #logger.writer.add_embedding(torch.stack(embd_mme), metadata=embd_label, tag='epoch/{}/mme'.format(mode))
     embd_label = torch.cat(embd_label)
-    logger.writer.add_figure('epoch/{}/org'.format(mode),
-                             draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
-    logger.writer.add_figure('epoch/{}/mme'.format(mode),
-                             draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
+    # logger.writer.add_figure('epoch/{}/org'.format(mode),
+    #                          draw_tsne(torch.cat(embd_org), embd_label, engine.classes, epoch, mode, 'org_{}'.format(mode)), epoch)
+    # logger.writer.add_figure('epoch/{}/mme'.format(mode),
+    #                          draw_tsne(torch.cat(embd_mme), embd_label, engine.classes, epoch, mode, 'mme_{}'.format(mode)), epoch)
 
     if 'main' in acc:
         return acc['main'], (loss, acc)

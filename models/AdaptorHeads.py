@@ -184,15 +184,9 @@ class EntropyMinimizationHead(Head):
             logits = self.do_lame(feats, logits)
             ret = {'LAME': {'acc_type': 'acc', 'pred': logits, 'target': label}}
         else:
-<<<<<<< HEAD
-            ret = {
-                'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
-                't-sne': {'feats': feats}}
-=======
              ret = {
                  'main': {'acc_type': 'acc', 'pred': logits, 'target': label},
             }
->>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
         if 'loss_name' in kwargs:
             loss_names = [kwargs['loss_name']]
         else:
@@ -222,10 +216,6 @@ class EntropyMinimizationHead(Head):
             res = {'LAME': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': self.do_lame(feats, logits), 'target': label}}
         else:
             res = {
-<<<<<<< HEAD
-                'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label},
-                't-sne': {'feats': feats}}
-=======
                 'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label}
             }
         return res
@@ -241,7 +231,6 @@ class EntropyMinimizationHead(Head):
                 'main': {'loss_type': 'ce', 'acc_type': 'acc', 'pred': logits, 'target': label},
                 'vis': {'feats': feats}
             }
->>>>>>> 7009bd82e4f38bf2a113749ef7152e7cf2ed26dd
         return res
 
     def setup(self, model, online):

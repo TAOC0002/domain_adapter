@@ -117,6 +117,7 @@ class AdaMixBN(nn.BatchNorm2d):
 class DomainAdaptor(ERM):
     def __init__(self, num_classes, pretrained=True, args=None):
         super(DomainAdaptor, self).__init__(num_classes, pretrained, args)
+        self.args = args
         heads = {
             'em': EntropyMinimizationHead,
             'rot': RotationHead,
@@ -125,6 +126,7 @@ class DomainAdaptor(ERM):
             'jigsaw': JigsawHead,
         }
         self.heads = [heads[head.lower()](num_classes, self.in_ch, args) for head in args.TTA_head]
+        self.head = self.heads[0]
         self.train_weights = args.main_weight
         self.ft_weights = args.sl_weight
         if args.AdaMixBN:
@@ -181,6 +183,8 @@ class DomainAdaptor(ERM):
             for i in range(self.head.ft_steps):
                 o = self.step(**data, train_mode='ft', step=i, loss_name=loss_name)
                 meta_train_loss = get_loss_and_acc(o, running_loss, running_corrects, prefix=f'ft_A{i}_')
+                if self.args.eval == 'tta_ft':
+                    meta_train_loss = meta_train_loss[0]
                 zero_and_update(optimizers, meta_train_loss)
                 if i == 0:
                     res = o
