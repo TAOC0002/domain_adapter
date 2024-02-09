@@ -386,7 +386,7 @@ class TinyImageNetC(BaseDatasetConfig):
     NumClasses = 200
     SplitRatio = -1
     RelativePath = ''
-    Domains = ['source', 'glass_blur']
+    Domains = ['source', 'jpeg_compression']
 
 @Datasets.register("Office31")
 class MiniDomainNet(BaseDatasetConfig):
