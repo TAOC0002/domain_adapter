@@ -8,12 +8,11 @@ import higher
 import pandas as pd
 from utils.t_sne import plot_tsne
 from sklearn.manifold import TSNE
-import copy
-import torch
+import numpy as np
 """
 ARM
 """
-
+sub_test = 200
 @TrainFuncs.register('tta_meta')
 def tta_meta_train(meta_model, train_data, lr, epoch, args, engine, mode):
     #import higher
@@ -60,6 +59,7 @@ def tta_meta_test(meta_model, eval_data, lr, epoch, args, engine, mode):
     print(f'Inner optimizer: {type(inner_opt).__name__}')
     for data in eval_data:
         data = to(data, device)
+
         with torch.no_grad():  # Normal Test
             get_loss_and_acc(meta_model.step(**data, train_mode='test'), running_loss, running_corrects, prefix='original_')
 
@@ -93,7 +93,8 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
     if args.with_max:
         str = str + f'Meta-train Max LR: {args.meta_max_lr}'
     print(str)
-    globalstep = len(train_data) * epoch
+    ndata = len(train_data)
+    globalstep = ndata * epoch
     #randaug_op = TestTimeAug(args)
     if args.domain_mixup:
         mixup_op = MixUp(meta_model.num_classes)
@@ -105,39 +106,36 @@ def tta_meta_minimax(meta_model, train_data, lr, epoch, args, engine, mode):
         if args.domain_mixup:
             split_data = mixup_op(split_data)
         #optimizers.zero_grad()
-        if args.with_max:
-            optimizers.zero_grad()
-            for data in split_data:
-                if args.domain_bn_shift:
-                    meta_model.StochasticBNShift(args.domain_bn_shift_p)
-                with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
-                    for _ in range(args.meta_step):
+        for _ in range(args.meta_step):
+            if args.with_max:
+                optimizers.zero_grad()
+                for data in split_data:
+                    if args.domain_bn_shift:
+                        meta_model.StochasticBNShift(args.domain_bn_shift_p)
+
+                    with higher.innerloop_ctx(meta_model, inner_opt_max, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_max):
                         unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss, running_corrects, prefix=f'spt_max_')
                         opt_max.step(sup_loss-unsup_loss)
                     losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_max_')
                     losses[0].backward()
+                optimizers.step()
+            optimizers.zero_grad()
+            for data in split_data:
+                if args.domain_bn_shift:
+                    meta_model.StochasticBNShift(args.domain_bn_shift_p)
+                with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
+                    for _ in range(args.meta_step):
+                        unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_ ), running_loss, running_corrects, prefix=f'spt_min_')
+                        opt_min.step(sup_loss + unsup_loss)
+                    losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
+                    losses[0].backward()
             optimizers.step()
-        optimizers.zero_grad()
-        # for param in inner_opt.param_groups[1]["params"]:
-        #     param.requires_grad = False
-        # for param in inner_opt.param_groups[0]["params"]:
-        #     param.requires_grad = True
-        for data in split_data:
-            if args.domain_bn_shift:
-                meta_model.StochasticBNShift(args.domain_bn_shift_p)
-            with higher.innerloop_ctx(meta_model, inner_opt_min, copy_initial_weights=False, track_higher_grads=True) as (fnet, opt_min):
-                for _ in range(args.meta_step):
-                    unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_ ), running_loss, running_corrects, prefix=f'spt_min_')
-                    opt_min.step(sup_loss + unsup_loss)
-                losses = get_loss_and_acc(fnet(**data, train_mode='train'), running_loss, running_corrects, prefix=f'qry_min_')
-                losses[0].backward()
-            optimizers.step()
-            
-            #loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
-            #acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
-            #print(loss_log + '\n' + acc_log + '\n')
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
+        if globalstep % sub_test == 0 and ndata>3*sub_test:
+            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
+                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test)
+            engine.logger.tf_log_file_step
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
@@ -157,7 +155,8 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
     print(str)
     if args.domain_mixup:
         mixup_op = MixUp(meta_model.num_classes)
-    globalstep = len(train_data) * epoch
+    ndata = len(train_data)
+    globalstep = ndata * epoch
     max_lrs = lrs.copy()
     min_lrs = lrs.copy()
     max_lrs[1:] = [0]*(len(lrs)-1)
@@ -185,13 +184,17 @@ def tta_meta_minimax1(meta_model, train_data, lr, epoch, args, engine, mode):
         optimizers.step()
         engine.logger.tf_log_file_step(mode, globalstep, running_loss.get_average_dicts(), running_corrects.get_average_dicts())
         globalstep += 1
+        if globalstep %sub_test  == 0 and ndata>sub_test*3:
+            acc_, (loss_dict, acc_dict) = EvalFuncs[engine.args.eval](meta_model, engine.target_test, lr, globalstep/sub_test ,
+                                                                    engine.args, engine, mode='test_sub', maxiter=sub_test )
+            engine.logger.tf_log_file_step('test_sub', globalstep/sub_test, loss_dict, acc_dict)
+            meta_model.train()
         #optimizers.step()
     return running_loss.get_average_dicts(), running_corrects.get_average_dicts()
 
 @EvalFuncs.register('tta_meta_sup')
-def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, t_sne_global=False, t_sne_local=True):
+def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, maxiter=np.inf):
     #import higher
-    tsne_dir = '/home/taochen/meta-learning/DomainAdaptor/t-sne/'
     device = engine.device
     logger = engine.logger
     running_loss, running_corrects = AverageMeterDict(), AverageMeterDict()
@@ -207,7 +210,10 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
     step = 0
     embd_org, embd_label, embd_max, embd_mme=[], [], [], []
     s = round(len(eval_data)/20+1)
+
     for data in eval_data:
+        if  step > maxiter:
+            break
         data = to(data, device)
         # Normal Test
         with torch.no_grad():
@@ -241,9 +247,8 @@ def tta_meta_minimax_test(meta_model, eval_data, lr, epoch, args, engine, mode, 
         if step % 100 == 0:
             loss_log = ' '.join([f'loss[{k}] {v}\t' for k, v in running_loss.get_average_dicts().items()])
             acc_log = ' '.join([f'acc[{k}] {v}\t' for k, v in running_corrects.get_average_dicts().items()])
-            # print(loss_log + '\n' + acc_log)
+            print(loss_log + '\n' + acc_log)
     loss, acc = running_loss.get_average_dicts(), running_corrects.get_average_dicts()
-
     # logger.writer.add_embedding(torch.cat(embd_org), metadata=embd_label, tag='epoch/{}/org'.format(mode))
     # if args.with_max:
     #     logger.writer.add_embedding(torch.cat(embd_max), metadata=embd_label, tag='epoch/{}/max'.format(mode))
@@ -277,7 +282,7 @@ def draw_tsne(feats, y, classname, epoch, mode, tag, log_dir=None):
         pass
 
 @EvalFuncs.register('tta_meta_sup1')
-def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode):
+def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode, maxiter=np.inf):
     #import higher
     device = engine.device
     logger = engine.logger
@@ -294,8 +299,10 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
     print(f'Meta LR_min : {args.meta_lr}, Meta LR max : {args.meta_lambd_lr}')
     step = 0
     embd_org, embd_label, embd_mme = [], [], []
-    s = round(len(eval_data)/20+1)
+    s = round(len(eval_data)/20*args.batch_size/64+1)
     for data in eval_data:
+        if  step > maxiter:
+            break
         data = to(data, device)
 
         # Normal Test
@@ -304,7 +311,7 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
             _, o = get_loss_and_acc(ret, running_loss, running_corrects, prefix='original_')
             if step %s==0:
                 embd_org.append(ret['vis']['feats'])
-                embd_label.append([data['label'][0].cpu().numpy().tolist() for v in data['label']])
+                embd_label.append(data['label'])
 
         with higher.innerloop_ctx(meta_model, mme_opt, track_higher_grads=False) as (fnet, opt):
             fnet.train()
@@ -313,7 +320,8 @@ def tta_meta_minimax_test1(meta_model, eval_data, lr, epoch, args, engine, mode)
                     unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                             running_corrects, prefix=f'spt_max_')
                     opt.step(sup_loss-unsup_loss, override={'lr': max_lrs})
-                unsup_loss, sup_loss = get_loss_and_acc(ret, running_loss,
+
+                unsup_loss, sup_loss = get_loss_and_acc(fnet(**data, train_mode='ft', step=_), running_loss,
                                                     running_corrects, prefix=f'spt_min_')
                 opt.step(sup_loss + unsup_loss, override={'lr': min_lrs})
             with torch.no_grad():
