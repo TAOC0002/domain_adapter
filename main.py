@@ -10,7 +10,7 @@ def get_default_parser():
     dataset = 'PACS'
     parser = argparse.ArgumentParser()
     parser.add_argument('--show-entry', action='store_true')
-
+    parser.add_argument('--text-root', default='/home/taochen/meta-learning/DomainAdaptor/dataloader/text_lists')
     parser.add_argument('--data-root', default='/data/DataSets/')
     parser.add_argument('--dataset', default='{}'.format(dataset))
     parser.add_argument('--save-path', default='../script/{}_New/resnet_test'.format(dataset))
@@ -53,7 +53,7 @@ def get_default_parser():
     parser.add_argument('--in-ch', default=3, type=int)
 
     # dataset
-    parser.add_argument('--loader', default='normal', choices=['normal', 'meta', 'original', 'interleaved'])
+    parser.add_argument('--loader', default='normal', choices=['normal', 'meta', 'original', 'interleaved', 'noniid'])
     parser.add_argument('--img-size', default=224, type=int)
     parser.add_argument('--color-jitter', type=ast.literal_eval, default=True)  # important
     parser.add_argument('--min-scale', type=float, default=0.8)
@@ -116,10 +116,11 @@ def get_default_parser():
     parser.add_argument('--online', action='store_true', default=False)
     parser.add_argument('--bn-momentum', action='store_true', default=False)
     parser.add_argument('--inner', nargs='*', default=['bias', 'weight', 'lambd'], type=str, help='inner learnable parameters')
-    parser.add_argument('--max_bn_layer', nargs='*', type=str, default=['backbone.bn1'])
+    parser.add_argument('--max-bn-layer', nargs='*', type=str, default=['backbone.bn1'])
     parser.add_argument('--with-max', action='store_true', default=False)
     parser.add_argument('--early_stopping_start', type=int, default=math.inf)
     parser.add_argument('--patience', type=int, default=3)
+    parser.add_argument('--level', type=int, default=5)
 
     return parser
 

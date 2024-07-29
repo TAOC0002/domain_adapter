@@ -97,18 +97,22 @@ def get_new_optimizers(model, lr=1e-4, names=('bn', 'conv', 'fc'), param_names=N
     if lambd_lr is None:
         lambd_lr = lr
     added = []
+    total = 0
     for name in names:
         name = name.lower()
         params, _names = collect_module_params(model, module_class=classes[name], param_names=param_names)
         for param, n in zip(params, _names):
             if layers is not None:
                  if not any(l in n for l in layers): continue
-            if n not in nonpara_name :
+            if n not in nonpara_name:
                 if 'lambd' in n:
                     opt_dic.append({'params': param, 'lr': lambd_lr})
                 else:
                     opt_dic.append({'params': param, 'lr': lr})
                 added.append(n)
+                total += param.size(dim=0)
+        # print(added)
+        # print(total)
     opt = get_optimizer(opt_dic, lr, opt_type, momentum)
     return opt, added
 

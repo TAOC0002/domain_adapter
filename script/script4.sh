@@ -1,0 +1,33 @@
+#!/bin/bash
+
+CUDA_VISIBLE_DEVICES="1" python main.py \
+  --img-size=224 \
+  --data-root='../data' \
+  --inneropt=sgd \
+  --optimizer=sgd \
+  --replace \
+  --meta-second-order=False \
+  --s=1 \
+  --loader=meta \
+  --rot \
+  --TTA-head rot \
+  --model=DomainAdaptor \
+  --backbone=resnet18 \
+  --batch-size=64 \
+  --start-time=0 \
+  --times=3 \
+  --lr=1e-3 \
+  --save-last \
+  --dataset='PACS' \
+  --save-path='pretrained_models/PACS/TTT-R' \
+  --corruption jpeg_compression \
+  --level 5 \
+  --do-train=True \
+  --num-epoch=30 \
+  --exp-num=1 \
+  --fc-weight=10.0 \
+  --train=deepall \
+  --eval=tta_ft \
+  --meta-step=1 \
+  --save-last \
+  --loss-names=em \
