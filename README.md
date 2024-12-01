@@ -1,26 +1,12 @@
-# DomainAdaptor
+# Meta-TTT
 
-The implementation of ICCV 2023 paper 《 [DomainAdaptor: A Novel Approach to Test-time Adaptation](https://arxiv.org/abs/2308.10297) 》
+Adapted from the paper 《 [Meta-TTT: A Meta-learning Minimax Framework For Test-Time Training](https://arxiv.org/abs/2410.01709) 》
 
-![](assets/image.png)
-
-## Install packages
-
-```bash
-conda install pytorch torchvision cudatoolkit
-conda install matplotlib tqdm tensorboardX
-```
-
+Test-time domain adaptation is a challenging task that aims to adapt a pre-trained model to limited, unlabeled target data during inference. Current methods that rely on self-supervision and entropy minimization underperform when the self-supervised learning (SSL) task does not align well with the primary objective. Additionally, minimizing entropy can lead to suboptimal solutions when there is limited diversity within minibatches. This paper introduces a meta-learning minimax framework for test-time training on batch normalization (BN) layers, ensuring that the SSL task aligns with the primary task while addressing minibatch overfitting. 
 
 ## Dataset structure
 
 ```
-PACS
-├── kfold
-│   ├── art_painting
-│   ├── cartoon
-│   ├── photo
-│   └── sketch
 VLCS
 ├── CALTECH
 │   ├── crossval
@@ -42,33 +28,18 @@ OfficeHome
 | ...
 ```
 
-The data root can be modified in [main.py](main.py) or pase the args `--data-root your_data_root`.
 
 ## Run the code
 
-The code of DomainAdaptor is in [models/DomainAdaptor.py](models/DomainAdaptor.py).
-
-The pretrained deepall models are available at [Google Drive](https://drive.google.com/drive/folders/1Ne7FiEVv45JHJqELZ1F_0c5cknwyal40?usp=drive_link).
-Or you can train the deepall models by yourself with the following code:
-
 ```bash
-bash script/deepall.sh
+bash scripts/scrip1.sh
 ```
-
-With the pretrained models, you can run the following code to evaluate with DomainAdaptor:
-
-```bash
-bash script/TTA.sh
-```
-
-## Citation
-
-```
-@inproceedings{zhang2023domainadaptor,
-  title={DomainAdaptor: A Novel Approach to Test-time Adaptation},
-  author={Zhang, Jian and Qi, Lei and Shi, Yinghuan and Gao, Yang},
-  bootitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
-  year={2023}
-}
-```
-
+you may pass the following arguments to adjust hyperparameters in the experiemnts:
+1. --with-max: Replace entropy with minimax entropy optimization
+2. --train=tta-meta-sup: Rrain source model with the proposed meta-learning framework for test-time-training 
+3. --eval=tta-meta-sup: Adapt source model to test streams with self-supervised learning
+4. --loader=meta: Select the dataloader suitable for the meta-learning framework
+5. --meta-step=1: Steps to perfrom meta learning
+6. --domain_bn_shift: Enable data augmentation per domain
+7. --max_bn_layer: Batch norm layers to maximize the entropy of their shift parameters
+8. --sup_thresh: Threshold to determine confident samples in self-supervised learning
